@@ -1,5 +1,10 @@
 pipeline {
-    agent any
+    agent {
+        docker {
+            image 'maven:3.9.6-eclipse-temurin-17'
+            args '-v /var/run/docker.sock:/var/run/docker.sock -v maven-repo:/root/.m2'
+        }
+    }
 
     environment {
         // ==========================================
@@ -17,10 +22,9 @@ pipeline {
         SONAR_PROJECT_KEY = 'product-service'
         
         // ==========================================
-        // Configuration Maven
+        // Configuration Maven (dans l'image Docker)
         // ==========================================
-        MAVEN_OPTS = '-Dmaven.repo.local=.m2/repository'
-        JAVA_HOME = '/usr/lib/jvm/java-17-openjdk'
+        MAVEN_OPTS = '-Dmaven.repo.local=/root/.m2/repository'
         
         // ==========================================
         // Seuils de sécurité

@@ -290,11 +290,12 @@ pipeline {
             steps {
                 echo "🤖 Installation et exécution des tests Robot Framework (30 tests E2E)..."
                 script {
-                    // Installer Robot Framework et les dépendances
                     sh '''
+                        echo "📦 Création d'un environnement virtuel Python..."
+                        python3 -m venv robot-venv
+                        
                         echo "📦 Installation de Robot Framework..."
-                        pip3 install --user robotframework robotframework-requests robotframework-jsonlibrary 2>/dev/null || pip install --user robotframework robotframework-requests robotframework-jsonlibrary
-                        export PATH=$PATH:$HOME/.local/bin
+                        ./robot-venv/bin/pip install robotframework robotframework-requests robotframework-jsonlibrary
                         
                         echo ""
                         echo "🤖 Exécution des 30 tests Robot Framework pour la non-régression..."
@@ -303,7 +304,7 @@ pipeline {
                         mkdir -p robot-reports
                         
                         # Exécuter Robot Framework avec les tests
-                        $HOME/.local/bin/robot \
+                        ./robot-venv/bin/robot \
                             --variable BASE_URL:http://product-service-test:8080 \
                             --outputdir robot-reports \
                             --xunit xunit.xml \
@@ -320,6 +321,7 @@ pipeline {
             post {
                 always {
                     sh 'docker rm -f product-service-test || true'
+                    sh 'rm -rf robot-venv || true'
                     junit testResults: 'robot-reports/xunit.xml', allowEmptyResults: true
                     archiveArtifacts artifacts: 'robot-reports/**/*', fingerprint: true, allowEmptyArchive: true
                 }

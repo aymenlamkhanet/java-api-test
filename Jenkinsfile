@@ -284,11 +284,11 @@ pipeline {
         }
 
         // ============================================
-        // STAGE 11: Tests Robot Framework (API Regression - 30 Tests E2E)
+        // STAGE 11: Tests Robot Framework (API Regression - 30 Tests)
         // ============================================
         stage('11-robot-api-regression') {
             steps {
-                echo "🤖 Installation et exécution des tests Robot Framework (30 tests E2E)..."
+                echo "🤖 Installation et exécution des tests Robot Framework (30 tests API)..."
                 script {
                     sh '''
                         echo "📦 Création d'un environnement virtuel Python..."
@@ -298,12 +298,12 @@ pipeline {
                         ./robot-venv/bin/pip install robotframework robotframework-requests robotframework-jsonlibrary
                         
                         echo ""
-                        echo "🤖 Exécution des 30 tests Robot Framework pour la non-régression..."
+                        echo "🤖 Exécution des tests API pour la non-régression..."
                         echo "============================================================"
                         
                         mkdir -p robot-reports
                         
-                        # Exécuter Robot Framework avec les tests (sans || true pour échouer si tests échouent)
+                        # Exécuter les tests API (30 tests)
                         ./robot-venv/bin/robot \
                             --variable BASE_URL:http://product-service-test:8080 \
                             --outputdir robot-reports \
@@ -314,7 +314,52 @@ pipeline {
                             robot-tests/api_tests.robot
                         
                         echo ""
-                        echo "✅ Tous les 30 tests Robot Framework ont passé!"
+                        echo "✅ Tous les 30 tests API ont passé!"
+                    '''
+                }
+            }
+            post {
+                always {
+                    junit testResults: 'robot-reports/xunit.xml', allowEmptyResults: true
+                }
+                success {
+                    echo "✅ Tests API: 30/30 PASSED"
+                }
+                failure {
+                    echo "❌ Tests API ECHEC - Le pipeline ne peut pas continuer"
+                }
+            }
+        }
+
+        // ============================================
+        // STAGE 12: Tests Workflow E2E (9 Scénarios Métier)
+        // ============================================
+        stage('12-robot-workflow-e2e') {
+            steps {
+                echo "🔄 Exécution des tests de Workflow E2E (9 scénarios métier complets)..."
+                script {
+                    sh '''
+                        echo ""
+                        echo "🔄 Tests de Workflow - Chaînage d'appels API"
+                        echo "============================================================"
+                        echo "Ces tests montrent EXACTEMENT où le workflow échoue!"
+                        echo ""
+                        
+                        mkdir -p workflow-reports
+                        
+                        # Exécuter les tests Workflow (9 scénarios)
+                        ./robot-venv/bin/robot \
+                            --variable BASE_URL:http://product-service-test:8080 \
+                            --outputdir workflow-reports \
+                            --xunit workflow-xunit.xml \
+                            --log workflow-log.html \
+                            --report workflow-report.html \
+                            --loglevel DEBUG \
+                            --name "Workflow_E2E_Tests" \
+                            robot-tests/workflow_tests.robot
+                        
+                        echo ""
+                        echo "✅ Tous les 9 workflows E2E ont passé!"
                     '''
                 }
             }
@@ -322,14 +367,15 @@ pipeline {
                 always {
                     sh 'docker rm -f product-service-test || true'
                     sh 'rm -rf robot-venv || true'
-                    junit testResults: 'robot-reports/xunit.xml', allowEmptyResults: true
+                    junit testResults: 'workflow-reports/workflow-xunit.xml', allowEmptyResults: true
                     archiveArtifacts artifacts: 'robot-reports/**/*', fingerprint: true, allowEmptyArchive: true
+                    archiveArtifacts artifacts: 'workflow-reports/**/*', fingerprint: true, allowEmptyArchive: true
                 }
                 success {
-                    echo "✅ Tests E2E Robot Framework: 30/30 PASSED"
+                    echo "✅ Tests Workflow E2E: 9/9 PASSED"
                 }
                 failure {
-                    echo "❌ Tests E2E Robot Framework: ECHEC - Le pipeline ne peut pas continuer sans 30/30 tests passants"
+                    echo "❌ Tests Workflow ECHEC - Consulter workflow-log.html pour voir exactement où ça a échoué"
                 }
             }
         }
@@ -349,11 +395,11 @@ Status: ${buildStatus}
 Commit: ${env.SHORT_SHA ?: 'N/A'}
 Build: #${env.BUILD_NUMBER}
 ==========================================
-    STAGES EXÉCUTÉS
+    STAGES EXÉCUTÉS (12 stages)
 ==========================================
 1. Checkout & Init        ✓
 2. Build Compile          ✓
-3. Tests Unitaires        90 tests
+3. Tests Unitaires        90 tests JUnit
 4. SonarQube Analysis     ✓
 5. Quality Gate           ✓
 6. OWASP Dependencies     ✓
@@ -361,18 +407,62 @@ Build: #${env.BUILD_NUMBER}
 8. Docker Image (Jib)     ✓
 9. Trivy Scan             ✓
 10. Smoke Test            ✓
-11. Robot Framework       30 tests E2E
+11. Robot API Tests       30 tests
+12. Robot Workflow E2E    9 scénarios
+==========================================
+    TESTS DE WORKFLOW E2E
+==========================================
+Les tests de workflow chaînent plusieurs appels 
+API pour tester des scénarios métier complets:
+
+1. Complete Order Workflow
+   Créer → Commander → Confirmer → Expédier → Livrer
+
+2. Order Cancellation Workflow  
+   Commander → Annuler + restauration stock
+
+3. Insufficient Stock Order
+   Commander plus que le stock → Échec 400
+
+4. Order Status Transition
+   Transitions invalides → Échec 400
+
+5. Multiple Products Order
+   Commander plusieurs produits + total
+
+6. Orders By Customer Email
+   Rechercher commandes par email
+
+7. Orders By Status
+   Filtrer commandes par statut
+
+8. Product Activation/Deactivation
+   Activer/Désactiver produits
+
+9. Order Inactive Product
+   Commander produit inactif → Échec 400
+
+EN CAS D'ÉCHEC: Consulter workflow-log.html
+pour voir EXACTEMENT où le workflow a échoué!
 ==========================================
     STATISTIQUES
 ==========================================
-Total Tests Unitaires: 90
-Total Tests E2E:       30
-Total Tests:           120
-Couverture Code:       ~70%
+Total Tests Unitaires:    90
+Total Tests API:          30
+Total Tests Workflow:     9
+Total Tests:              129
+Couverture Code:          ~70%
+==========================================
+    ARTEFACTS GÉNÉRÉS
+==========================================
+- target/*.jar           (Application)
+- robot-reports/         (Tests API)
+- workflow-reports/      (Tests Workflow)
+- pipeline-report.txt    (Ce rapport)
 ==========================================
     RÉSULTAT FINAL
 ==========================================
-${buildStatus == 'SUCCESS' ? '🎉 PIPELINE RÉUSSI - Tous les critères de qualité sont satisfaits!' : '❌ PIPELINE ÉCHOUÉ - Vérifier les logs pour plus de détails'}
+${buildStatus == 'SUCCESS' ? '🎉 PIPELINE RÉUSSI!\nTous les critères de qualité sont satisfaits!\n129 tests passés avec succès!' : '❌ PIPELINE ÉCHOUÉ!\nVérifier les logs pour plus de détails.\nConsulter workflow-log.html pour les échecs de workflow.'}
 ==========================================
 """
                 echo reportContent

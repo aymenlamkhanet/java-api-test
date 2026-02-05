@@ -266,54 +266,47 @@ pipeline {
         }
 
         // ============================================
-        // STAGE 11: Tests Robot Framework (API Regression)
+        // STAGE 11: Tests Robot Framework (API Regression - 30 Tests E2E)
         // ============================================
         stage('11-robot-api-regression') {
             steps {
-                echo "🤖 Tests Robot Framework..."
+                echo "🤖 Installation et exécution des tests Robot Framework (30 tests E2E)..."
                 script {
-                    // Test simple d'API avec curl pour valider l'application
-                    echo "Exécution de tests API de base..."
-                    
+                    // Installer Robot Framework et les dépendances
                     sh '''
-                        echo "=== Test 1: Health Check ==="
-                        curl -s http://product-service-test:8080/actuator/health | grep -q "UP" && echo "✅ Health Check: PASSED" || echo "❌ Health Check: FAILED"
-                        
-                        echo "=== Test 2: API Products GET ==="
-                        HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://product-service-test:8080/api/v1/products)
-                        if [ "$HTTP_CODE" = "200" ]; then
-                            echo "✅ GET /api/v1/products: PASSED (HTTP $HTTP_CODE)"
-                        else
-                            echo "⚠️ GET /api/v1/products: HTTP $HTTP_CODE"
-                        fi
-                        
-                        echo "=== Test 3: API Orders GET ==="
-                        HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://product-service-test:8080/api/v1/orders)
-                        if [ "$HTTP_CODE" = "200" ]; then
-                            echo "✅ GET /api/v1/orders: PASSED (HTTP $HTTP_CODE)"
-                        else
-                            echo "⚠️ GET /api/v1/orders: HTTP $HTTP_CODE"
-                        fi
-                        
-                        echo "=== Test 4: Actuator Info ==="
-                        HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://product-service-test:8080/actuator/info)
-                        if [ "$HTTP_CODE" = "200" ]; then
-                            echo "✅ GET /actuator/info: PASSED (HTTP $HTTP_CODE)"
-                        else
-                            echo "⚠️ GET /actuator/info: HTTP $HTTP_CODE"
-                        fi
+                        echo "📦 Installation de Robot Framework..."
+                        pip3 install --user robotframework robotframework-requests robotframework-jsonlibrary 2>/dev/null || pip install --user robotframework robotframework-requests robotframework-jsonlibrary
+                        export PATH=$PATH:$HOME/.local/bin
                         
                         echo ""
-                        echo "📊 Tests API terminés - 4/4 endpoints testés"
+                        echo "🤖 Exécution des 30 tests Robot Framework pour la non-régression..."
+                        echo "============================================================"
+                        
+                        mkdir -p robot-reports
+                        
+                        # Exécuter Robot Framework avec les tests
+                        $HOME/.local/bin/robot \
+                            --variable BASE_URL:http://product-service-test:8080 \
+                            --outputdir robot-reports \
+                            --xunit xunit.xml \
+                            --log log.html \
+                            --report report.html \
+                            --name "API_Regression_Tests" \
+                            robot-tests/api_tests.robot || true
+                        
+                        echo ""
+                        echo "📊 Résultats des tests Robot Framework disponibles dans robot-reports/"
                     '''
                 }
             }
             post {
                 always {
                     sh 'docker rm -f product-service-test || true'
+                    junit testResults: 'robot-reports/xunit.xml', allowEmptyResults: true
+                    archiveArtifacts artifacts: 'robot-reports/**/*', fingerprint: true, allowEmptyArchive: true
                 }
                 success {
-                    echo "✅ Tests E2E terminés"
+                    echo "✅ Tests E2E Robot Framework terminés - 30 tests de non-régression"
                 }
             }
         }

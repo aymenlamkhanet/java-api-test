@@ -44,6 +44,8 @@ pipeline {
             steps {
                 cleanWs()
                 checkout scm
+                sh 'ls -la'
+                sh 'cat pom.xml | head -20'
                 script {
                     // Calcul du SHA court pour le tag de l'image
                     env.SHORT_SHA = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
@@ -57,6 +59,7 @@ pipeline {
                     echo "Git Commit: ${SHORT_SHA}"
                     echo "Build Tag: ${BUILD_TAG}"
                     echo "Image Reference: ${IMAGE_REF}"
+                    echo "WORKSPACE: ${WORKSPACE}"
                     echo "=========================================="
                 }
             }
@@ -68,6 +71,7 @@ pipeline {
         stage('2-build-compile') {
             steps {
                 echo "🔨 Compilation du code Java..."
+                sh "ls -la ${WORKSPACE}"
                 sh """
                     docker run --rm \
                         -v ${WORKSPACE}:/app \

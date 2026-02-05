@@ -287,12 +287,12 @@ pipeline {
                             echo "⚠️ GET /api/v1/products: HTTP $HTTP_CODE"
                         fi
                         
-                        echo "=== Test 3: API Categories GET ==="
-                        HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://product-service-test:8080/api/v1/categories)
+                        echo "=== Test 3: API Orders GET ==="
+                        HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://product-service-test:8080/api/v1/orders)
                         if [ "$HTTP_CODE" = "200" ]; then
-                            echo "✅ GET /api/v1/categories: PASSED (HTTP $HTTP_CODE)"
+                            echo "✅ GET /api/v1/orders: PASSED (HTTP $HTTP_CODE)"
                         else
-                            echo "⚠️ GET /api/v1/categories: HTTP $HTTP_CODE"
+                            echo "⚠️ GET /api/v1/orders: HTTP $HTTP_CODE"
                         fi
                         
                         echo "=== Test 4: Actuator Info ==="
@@ -304,7 +304,7 @@ pipeline {
                         fi
                         
                         echo ""
-                        echo "📊 Tests API terminés"
+                        echo "📊 Tests API terminés - 4/4 endpoints testés"
                     '''
                 }
             }

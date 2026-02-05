@@ -68,14 +68,14 @@ pipeline {
         stage('2-build-compile') {
             steps {
                 echo "🔨 Compilation du code Java..."
-                sh '''
+                sh """
                     docker run --rm \
-                        -v "$(pwd)":/app \
+                        -v ${WORKSPACE}:/app \
                         -v maven-repo:/root/.m2 \
                         -w /app \
-                        ${MAVEN_IMAGE} \
+                        maven:3.9.6-eclipse-temurin-17 \
                         mvn compile -B -q -DskipTests
-                '''
+                """
             }
             post {
                 failure {
@@ -94,14 +94,14 @@ pipeline {
         stage('3-unit-tests') {
             steps {
                 echo "🧪 Exécution des tests unitaires et d'intégration..."
-                sh '''
+                sh """
                     docker run --rm \
-                        -v "$(pwd)":/app \
+                        -v ${WORKSPACE}:/app \
                         -v maven-repo:/root/.m2 \
                         -w /app \
-                        ${MAVEN_IMAGE} \
+                        maven:3.9.6-eclipse-temurin-17 \
                         mvn test -B
-                '''
+                """
             }
             post {
                 always {
@@ -141,20 +141,20 @@ pipeline {
             steps {
                 echo "🔍 Analyse SonarQube (SAST + Qualité du code)..."
                 withSonarQubeEnv('SonarQube') {
-                    sh '''
+                    sh """
                         docker run --rm \
-                            -v "$(pwd)":/app \
+                            -v ${WORKSPACE}:/app \
                             -v maven-repo:/root/.m2 \
                             -w /app \
                             --network host \
-                            ${MAVEN_IMAGE} \
+                            maven:3.9.6-eclipse-temurin-17 \
                             mvn sonar:sonar -B \
                                 -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
                                 -Dsonar.projectName="Product Service" \
                                 -Dsonar.host.url=${SONAR_HOST_URL} \
                                 -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml \
                                 -Dsonar.junit.reportPaths=target/surefire-reports
-                    '''
+                    """
                 }
             }
             post {
@@ -191,16 +191,15 @@ pipeline {
         stage('6-sca-dependencies') {
             steps {
                 echo "🔐 Analyse des vulnérabilités des dépendances (OWASP)..."
-                sh '''
+                sh """
                     docker run --rm \
-                        -v "$(pwd)":/app \
+                        -v ${WORKSPACE}:/app \
                         -v maven-repo:/root/.m2 \
                         -w /app \
-                        ${MAVEN_IMAGE} \
+                        maven:3.9.6-eclipse-temurin-17 \
                         mvn org.owasp:dependency-check-maven:check -B \
-                            -DfailBuildOnCVSS=${DEPENDENCY_CHECK_FAIL_SCORE} \
-                            -DsuppressionFile=dependency-check-suppression.xml || true
-                '''
+                            -DfailBuildOnCVSS=9 || true
+                """
             }
             post {
                 always {
@@ -220,14 +219,14 @@ pipeline {
         stage('7-package') {
             steps {
                 echo "📦 Création du package JAR..."
-                sh '''
+                sh """
                     docker run --rm \
-                        -v "$(pwd)":/app \
+                        -v ${WORKSPACE}:/app \
                         -v maven-repo:/root/.m2 \
                         -w /app \
-                        ${MAVEN_IMAGE} \
+                        maven:3.9.6-eclipse-temurin-17 \
                         mvn package -B -DskipTests -q
-                '''
+                """
             }
             post {
                 success {
@@ -243,18 +242,18 @@ pipeline {
         stage('8-image-build-jib-local') {
             steps {
                 echo "🐳 Construction de l'image Docker avec Jib..."
-                sh '''
+                sh """
                     docker run --rm \
-                        -v "$(pwd)":/app \
+                        -v ${WORKSPACE}:/app \
                         -v maven-repo:/root/.m2 \
                         -v /var/run/docker.sock:/var/run/docker.sock \
                         -w /app \
-                        ${MAVEN_IMAGE} \
+                        maven:3.9.6-eclipse-temurin-17 \
                         mvn jib:dockerBuild -B \
                             -Djib.to.image=${IMAGE_REF} \
                             -Djib.to.tags=${BUILD_TAG},${SHORT_SHA},latest \
                             -Djib.console=plain
-                '''
+                """
             }
             post {
                 success {
@@ -269,16 +268,16 @@ pipeline {
         stage('9-trivy-image-scan') {
             steps {
                 echo "🛡️ Scan de vulnérabilités de l'image avec Trivy..."
-                sh '''
+                sh """
                     docker run --rm \
                         -v /var/run/docker.sock:/var/run/docker.sock \
                         aquasec/trivy:latest image \
-                            --severity ${TRIVY_SEVERITY} \
+                            --severity CRITICAL,HIGH \
                             --exit-code 0 \
                             --no-progress \
                             --format table \
                             ${IMAGE_REF}
-                '''
+                """
             }
             post {
                 failure {
@@ -343,12 +342,12 @@ pipeline {
         stage('11-robot-api-regression') {
             steps {
                 echo "🤖 Exécution des tests Robot Framework (30 tests E2E)..."
-                sh '''
+                sh """
                     mkdir -p robot-reports
                     docker run --rm \
                         --network host \
-                        -v $(pwd)/robot-tests:/tests \
-                        -v $(pwd)/robot-reports:/reports \
+                        -v ${WORKSPACE}/robot-tests:/tests \
+                        -v ${WORKSPACE}/robot-reports:/reports \
                         ppodgorsek/robot-framework:latest \
                         robot \
                             --outputdir /reports \
@@ -356,7 +355,7 @@ pipeline {
                             --log log.html \
                             --report report.html \
                             /tests/api_tests.robot
-                '''
+                """
             }
             post {
                 always {

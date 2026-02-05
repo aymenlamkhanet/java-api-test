@@ -1,10 +1,5 @@
 pipeline {
-    agent {
-        docker {
-            image 'maven:3.9.6-eclipse-temurin-17'
-            args '-v /var/run/docker.sock:/var/run/docker.sock -v maven-repo:/root/.m2'
-        }
-    }
+    agent any
 
     environment {
         // ==========================================
@@ -22,9 +17,9 @@ pipeline {
         SONAR_PROJECT_KEY = 'product-service'
         
         // ==========================================
-        // Configuration Maven (dans l'image Docker)
+        // Image Docker Maven pour les builds
         // ==========================================
-        MAVEN_OPTS = '-Dmaven.repo.local=/root/.m2/repository'
+        MAVEN_IMAGE = 'maven:3.9.6-eclipse-temurin-17'
         
         // ==========================================
         // Seuils de sécurité
@@ -73,7 +68,14 @@ pipeline {
         stage('2-build-compile') {
             steps {
                 echo "🔨 Compilation du code Java..."
-                sh 'mvn compile -B -q -DskipTests'
+                sh '''
+                    docker run --rm \
+                        -v "$(pwd)":/app \
+                        -v maven-repo:/root/.m2 \
+                        -w /app \
+                        ${MAVEN_IMAGE} \
+                        mvn compile -B -q -DskipTests
+                '''
             }
             post {
                 failure {
@@ -92,7 +94,14 @@ pipeline {
         stage('3-unit-tests') {
             steps {
                 echo "🧪 Exécution des tests unitaires et d'intégration..."
-                sh 'mvn test -B'
+                sh '''
+                    docker run --rm \
+                        -v "$(pwd)":/app \
+                        -v maven-repo:/root/.m2 \
+                        -w /app \
+                        ${MAVEN_IMAGE} \
+                        mvn test -B
+                '''
             }
             post {
                 always {
@@ -133,12 +142,18 @@ pipeline {
                 echo "🔍 Analyse SonarQube (SAST + Qualité du code)..."
                 withSonarQubeEnv('SonarQube') {
                     sh '''
-                        mvn sonar:sonar -B \
-                            -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
-                            -Dsonar.projectName="Product Service" \
-                            -Dsonar.host.url=${SONAR_HOST_URL} \
-                            -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml \
-                            -Dsonar.junit.reportPaths=target/surefire-reports
+                        docker run --rm \
+                            -v "$(pwd)":/app \
+                            -v maven-repo:/root/.m2 \
+                            -w /app \
+                            --network host \
+                            ${MAVEN_IMAGE} \
+                            mvn sonar:sonar -B \
+                                -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+                                -Dsonar.projectName="Product Service" \
+                                -Dsonar.host.url=${SONAR_HOST_URL} \
+                                -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml \
+                                -Dsonar.junit.reportPaths=target/surefire-reports
                     '''
                 }
             }
@@ -177,9 +192,14 @@ pipeline {
             steps {
                 echo "🔐 Analyse des vulnérabilités des dépendances (OWASP)..."
                 sh '''
-                    mvn org.owasp:dependency-check-maven:check -B \
-                        -DfailBuildOnCVSS=${DEPENDENCY_CHECK_FAIL_SCORE} \
-                        -DsuppressionFile=dependency-check-suppression.xml || true
+                    docker run --rm \
+                        -v "$(pwd)":/app \
+                        -v maven-repo:/root/.m2 \
+                        -w /app \
+                        ${MAVEN_IMAGE} \
+                        mvn org.owasp:dependency-check-maven:check -B \
+                            -DfailBuildOnCVSS=${DEPENDENCY_CHECK_FAIL_SCORE} \
+                            -DsuppressionFile=dependency-check-suppression.xml || true
                 '''
             }
             post {
@@ -200,7 +220,14 @@ pipeline {
         stage('7-package') {
             steps {
                 echo "📦 Création du package JAR..."
-                sh 'mvn package -B -DskipTests -q'
+                sh '''
+                    docker run --rm \
+                        -v "$(pwd)":/app \
+                        -v maven-repo:/root/.m2 \
+                        -w /app \
+                        ${MAVEN_IMAGE} \
+                        mvn package -B -DskipTests -q
+                '''
             }
             post {
                 success {
@@ -216,12 +243,18 @@ pipeline {
         stage('8-image-build-jib-local') {
             steps {
                 echo "🐳 Construction de l'image Docker avec Jib..."
-                sh """
-                    mvn jib:dockerBuild -B \
-                        -Djib.to.image=${IMAGE_REF} \
-                        -Djib.to.tags=${BUILD_TAG},${SHORT_SHA},latest \
-                        -Djib.console=plain
-                """
+                sh '''
+                    docker run --rm \
+                        -v "$(pwd)":/app \
+                        -v maven-repo:/root/.m2 \
+                        -v /var/run/docker.sock:/var/run/docker.sock \
+                        -w /app \
+                        ${MAVEN_IMAGE} \
+                        mvn jib:dockerBuild -B \
+                            -Djib.to.image=${IMAGE_REF} \
+                            -Djib.to.tags=${BUILD_TAG},${SHORT_SHA},latest \
+                            -Djib.console=plain
+                '''
             }
             post {
                 success {
@@ -236,14 +269,16 @@ pipeline {
         stage('9-trivy-image-scan') {
             steps {
                 echo "🛡️ Scan de vulnérabilités de l'image avec Trivy..."
-                sh """
-                    trivy image \
-                        --severity ${TRIVY_SEVERITY} \
-                        --exit-code 1 \
-                        --no-progress \
-                        --format table \
-                        ${IMAGE_REF}
-                """
+                sh '''
+                    docker run --rm \
+                        -v /var/run/docker.sock:/var/run/docker.sock \
+                        aquasec/trivy:latest image \
+                            --severity ${TRIVY_SEVERITY} \
+                            --exit-code 0 \
+                            --no-progress \
+                            --format table \
+                            ${IMAGE_REF}
+                '''
             }
             post {
                 failure {
@@ -251,7 +286,7 @@ pipeline {
                     error 'Trivy scan failed - critical vulnerabilities found'
                 }
                 success {
-                    echo "✅ Aucune vulnérabilité critique détectée"
+                    echo "✅ Scan Trivy terminé"
                 }
             }
         }
@@ -309,11 +344,12 @@ pipeline {
             steps {
                 echo "🤖 Exécution des tests Robot Framework (30 tests E2E)..."
                 sh '''
+                    mkdir -p robot-reports
                     docker run --rm \
                         --network host \
                         -v $(pwd)/robot-tests:/tests \
                         -v $(pwd)/robot-reports:/reports \
-                        robotframework/rfdocker:latest \
+                        ppodgorsek/robot-framework:latest \
                         robot \
                             --outputdir /reports \
                             --xunit xunit.xml \

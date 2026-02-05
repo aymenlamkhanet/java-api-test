@@ -110,7 +110,7 @@ pipeline {
         stage('4-sonarqube-sast-quality') {
             steps {
                 echo "🔍 Analyse SonarQube (SAST + Qualité du code)..."
-                withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
+                withCredentials([string(credentialsId: 'sonarqube_token', variable: 'SONAR_TOKEN')]) {
                     sh '''
                         mvn sonar:sonar -B \
                             -Dsonar.projectKey=product-service \

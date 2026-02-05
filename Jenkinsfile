@@ -147,7 +147,7 @@ pipeline {
                         
                         // Vérifier le statut via l'API SonarQube
                         def response = sh(
-                            script: """curl -s -u admin:admin "${SONAR_HOST_URL}/api/qualitygates/project_status?projectKey=${SONAR_PROJECT_KEY}" """,
+                            script: """curl -s -u admin:Aymen1405DD "${SONAR_HOST_URL}/api/qualitygates/project_status?projectKey=${SONAR_PROJECT_KEY}" """,
                             returnStdout: true
                         ).trim()
                         

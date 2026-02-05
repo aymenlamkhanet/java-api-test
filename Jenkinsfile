@@ -113,9 +113,9 @@ pipeline {
                 withCredentials([string(credentialsId: 'sonarqube_token', variable: 'SONAR_TOKEN')]) {
                     sh '''
                         mvn sonar:sonar -B \
-                            -Dsonar.projectKey=product-service \
+                            -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
                             -Dsonar.projectName="Product Service" \
-                            -Dsonar.host.url=http://sonarqube:9000 \
+                            -Dsonar.host.url=${SONAR_HOST_URL} \
                             -Dsonar.token=${SONAR_TOKEN}
                     '''
                 }
@@ -128,20 +128,21 @@ pipeline {
         }
 
         // ============================================
-        // STAGE 5: Quality Gate (Optionnel)
+        // STAGE 5: Quality Gate (Bloquant)
         // ============================================
         stage('5-quality-gate') {
             steps {
                 echo "🚦 Vérification du Quality Gate SonarQube..."
-                script {
-                    try {
-                        timeout(time: 2, unit: 'MINUTES') {
-                            waitForQualityGate abortPipeline: false
-                        }
-                        echo "✅ Quality Gate vérifié"
-                    } catch (Exception e) {
-                        echo "⚠️ Quality Gate non disponible - Continuer le pipeline"
-                    }
+                timeout(time: 5, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
+            }
+            post {
+                failure {
+                    echo "❌ ERREUR: Quality Gate non conforme"
+                }
+                success {
+                    echo "✅ Quality Gate PASSED"
                 }
             }
         }

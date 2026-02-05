@@ -3,12 +3,20 @@ Documentation     API Regression Tests for Product Service
 Library           RequestsLibrary
 Library           Collections
 Library           JSONLibrary
-Suite Setup       Create Session    api    ${BASE_URL}
+Library           String
+Suite Setup       Initialize Test Suite
 Suite Teardown    Delete All Sessions
 
 *** Variables ***
 ${BASE_URL}       http://localhost:8080
 ${API_PATH}       /api/v1
+${RANDOM}         0
+
+*** Keywords ***
+Initialize Test Suite
+    Create Session    api    ${BASE_URL}
+    ${random_num}=    Generate Random String    8    [NUMBERS]
+    Set Suite Variable    ${RANDOM}    ${random_num}
 
 *** Test Cases ***
 

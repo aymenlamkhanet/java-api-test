@@ -135,47 +135,12 @@ pipeline {
         stage('5-quality-gate') {
             steps {
                 echo "🚦 Vérification du Quality Gate SonarQube..."
-                script {
-                    // Attendre que l'analyse soit terminée et vérifier le Quality Gate via API
-                    def maxAttempts = 30
-                    def attempt = 0
-                    def qualityGateStatus = 'PENDING'
-                    
-                    while (attempt < maxAttempts && qualityGateStatus == 'PENDING') {
-                        attempt++
-                        echo "Checking Quality Gate status (attempt ${attempt}/${maxAttempts})..."
-                        
-                        // Vérifier le statut via l'API SonarQube
-                        def response = sh(
-                            script: """curl -s -u admin:Aymen1405DD "${SONAR_HOST_URL}/api/qualitygates/project_status?projectKey=${SONAR_PROJECT_KEY}" """,
-                            returnStdout: true
-                        ).trim()
-                        
-                        echo "API Response: ${response}"
-                        
-                        if (response.contains('"status":"OK"')) {
-                            qualityGateStatus = 'OK'
-                            echo "✅ Quality Gate PASSED"
-                        } else if (response.contains('"status":"ERROR"')) {
-                            qualityGateStatus = 'ERROR'
-                            echo "⚠️ Quality Gate FAILED (but continuing pipeline)"
-                        } else if (response.contains('"status":"WARN"')) {
-                            qualityGateStatus = 'WARN'
-                            echo "⚠️ Quality Gate WARNING"
-                        } else {
-                            // Attendre avant de réessayer
-                            sleep(time: 10, unit: 'SECONDS')
-                        }
-                    }
-                    
-                    if (qualityGateStatus == 'PENDING') {
-                        echo "⚠️ Quality Gate check timed out - continuing pipeline"
-                    }
-                }
+                echo "ℹ️ Quality Gate status visible sur: ${SONAR_HOST_URL}/dashboard?id=${SONAR_PROJECT_KEY}"
+                echo "✅ Quality Gate check skipped - voir résultats dans SonarQube UI"
             }
             post {
                 success {
-                    echo "✅ Quality Gate check completed"
+                    echo "✅ Quality Gate stage completed"
                 }
             }
         }

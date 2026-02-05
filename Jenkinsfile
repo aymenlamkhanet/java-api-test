@@ -2,11 +2,8 @@ pipeline {
     agent any
 
     tools {
-        // Nécessite la configuration de Maven dans Jenkins:
-        // Manage Jenkins > Tools > Maven installations > Add Maven
-        // Name: Maven-3.9
-        maven 'Maven-3.9'
-        jdk 'JDK-17'
+        // Utilise les outils configurés dans Jenkins
+        maven 'maven3.9'
     }
 
     environment {

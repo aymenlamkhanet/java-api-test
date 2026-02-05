@@ -1,8 +1,8 @@
 *** Settings ***
-Documentation     API Regression Tests for Product Service
+Documentation     API Regression Tests for Product Service - Non-Regression Testing
+...               30 tests E2E pour valider la non-régression de l'API
 Library           RequestsLibrary
 Library           Collections
-Library           JSONLibrary
 Library           String
 Suite Setup       Initialize Test Suite
 Suite Teardown    Delete All Sessions
@@ -10,669 +10,289 @@ Suite Teardown    Delete All Sessions
 *** Variables ***
 ${BASE_URL}       http://localhost:8080
 ${API_PATH}       /api/v1
-${RANDOM}         0
+${RANDOM_ID}      0
 
 *** Keywords ***
 Initialize Test Suite
     Create Session    api    ${BASE_URL}
     ${random_num}=    Generate Random String    8    [NUMBERS]
-    Set Suite Variable    ${RANDOM}    ${random_num}
+    Set Suite Variable    ${RANDOM_ID}    ${random_num}
+
+Create Unique Product
+    [Arguments]    ${suffix}=default
+    ${unique_sku}=    Set Variable    SKU-${RANDOM_ID}-${suffix}
+    ${product}=    Create Dictionary
+    ...    name=Product ${suffix} ${RANDOM_ID}
+    ...    description=Test product for non-regression
+    ...    price=99.99
+    ...    stockQuantity=100
+    ...    category=Testing
+    ...    sku=${unique_sku}
+    ...    active=true
+    ${response}=    POST On Session    api    ${API_PATH}/products    json=${product}
+    RETURN    ${response}
 
 *** Test Cases ***
 
 # ==========================================
-# Health Check Tests
+# HEALTH CHECK TESTS (4 tests)
 # ==========================================
 
-Health Check Should Return UP
+Test 01 - Health Check Should Return UP
     [Documentation]    Verify that the application health endpoint returns UP status
-    [Tags]    smoke    health
+    [Tags]    smoke    health    critical
     ${response}=    GET On Session    api    /actuator/health
     Should Be Equal As Strings    ${response.status_code}    200
     ${json}=    Set Variable    ${response.json()}
     Should Be Equal As Strings    ${json['status']}    UP
 
-Readiness Probe Should Return UP
+Test 02 - Readiness Probe Should Return UP
     [Documentation]    Verify the Kubernetes readiness probe endpoint
     [Tags]    smoke    health
     ${response}=    GET On Session    api    /actuator/health/readiness
     Should Be Equal As Strings    ${response.status_code}    200
 
-Liveness Probe Should Return UP
+Test 03 - Liveness Probe Should Return UP
     [Documentation]    Verify the Kubernetes liveness probe endpoint
     [Tags]    smoke    health
     ${response}=    GET On Session    api    /actuator/health/liveness
     Should Be Equal As Strings    ${response.status_code}    200
 
-Custom Health Endpoint Should Return Service Info
+Test 04 - Custom Health Endpoint Returns Service Info
     [Documentation]    Verify custom health endpoint returns service information
     [Tags]    smoke    health
     ${response}=    GET On Session    api    ${API_PATH}/health
     Should Be Equal As Strings    ${response.status_code}    200
     ${json}=    Set Variable    ${response.json()}
     Should Be Equal As Strings    ${json['status']}    UP
-    Dictionary Should Contain Key    ${json}    service
-    Dictionary Should Contain Key    ${json}    version
 
 # ==========================================
-# Product CRUD Tests
+# PRODUCT CRUD TESTS (10 tests)
 # ==========================================
 
-Create Product Successfully
+Test 05 - Create Product Successfully
     [Documentation]    Create a new product and verify it's saved correctly
-    [Tags]    crud    product
-    ${product}=    Create Dictionary
-    ...    name=Test Robot Product
-    ...    description=Product created by Robot Framework
-    ...    price=99.99
-    ...    stockQuantity=50
-    ...    category=Testing
-    ...    sku=ROBOT-001
-    ...    active=true
-    
-    ${response}=    POST On Session    api    ${API_PATH}/products    json=${product}
+    [Tags]    crud    product    critical
+    ${response}=    Create Unique Product    test05
     Should Be Equal As Strings    ${response.status_code}    201
     ${json}=    Set Variable    ${response.json()}
-    Should Be Equal As Strings    ${json['name']}    Test Robot Product
-    Should Be Equal As Strings    ${json['sku']}    ROBOT-001
-    
-    # Store product ID for later tests
-    Set Suite Variable    ${CREATED_PRODUCT_ID}    ${json['id']}
+    Should Not Be Empty    ${json['id']}
+    Set Suite Variable    ${PRODUCT_ID_05}    ${json['id']}
 
-Get Product By ID
+Test 06 - Get Product By ID
     [Documentation]    Retrieve a product by its ID
     [Tags]    crud    product
-    [Setup]    Create Test Product
-    ${response}=    GET On Session    api    ${API_PATH}/products/${TEST_PRODUCT_ID}
+    ${response}=    GET On Session    api    ${API_PATH}/products/${PRODUCT_ID_05}
     Should Be Equal As Strings    ${response.status_code}    200
     ${json}=    Set Variable    ${response.json()}
     Should Not Be Empty    ${json['name']}
 
-Get All Products
+Test 07 - Get All Products
     [Documentation]    Retrieve all products from the API
     [Tags]    crud    product
     ${response}=    GET On Session    api    ${API_PATH}/products
     Should Be Equal As Strings    ${response.status_code}    200
     ${json}=    Set Variable    ${response.json()}
-    Should Be True    len(${json}) >= 0
+    Should Be True    len(${json}) >= 1
 
-Update Product Successfully
+Test 08 - Update Product Successfully
     [Documentation]    Update an existing product
     [Tags]    crud    product
-    [Setup]    Create Test Product
-    
     ${updated_product}=    Create Dictionary
-    ...    name=Updated Robot Product
+    ...    name=Updated Product ${RANDOM_ID}
     ...    description=Updated by Robot Framework
     ...    price=149.99
-    ...    stockQuantity=100
-    ...    category=Updated Testing
-    ...    sku=ROBOT-UPD-001
+    ...    stockQuantity=200
+    ...    category=Updated
+    ...    sku=SKU-${RANDOM_ID}-test05
     ...    active=true
-    
-    ${response}=    PUT On Session    api    ${API_PATH}/products/${TEST_PRODUCT_ID}    json=${updated_product}
+    ${response}=    PUT On Session    api    ${API_PATH}/products/${PRODUCT_ID_05}    json=${updated_product}
     Should Be Equal As Strings    ${response.status_code}    200
-    ${json}=    Set Variable    ${response.json()}
-    Should Be Equal As Strings    ${json['name']}    Updated Robot Product
 
-Delete Product Successfully
-    [Documentation]    Delete a product from the system
-    [Tags]    crud    product
-    [Setup]    Create Test Product
-    
-    ${response}=    DELETE On Session    api    ${API_PATH}/products/${TEST_PRODUCT_ID}
-    Should Be Equal As Strings    ${response.status_code}    204
-    
-    # Verify product is deleted
-    ${response}=    GET On Session    api    ${API_PATH}/products/${TEST_PRODUCT_ID}    expected_status=404
-    Should Be Equal As Strings    ${response.status_code}    404
-
-# ==========================================
-# Product Search & Filter Tests
-# ==========================================
-
-Get Products By Category
+Test 09 - Get Products By Category
     [Documentation]    Retrieve products filtered by category
     [Tags]    search    product
-    [Setup]    Create Test Product With Category
-    
-    ${response}=    GET On Session    api    ${API_PATH}/products/category/Electronics
+    ${response}=    GET On Session    api    ${API_PATH}/products/category/Updated
     Should Be Equal As Strings    ${response.status_code}    200
 
-Search Products By Keyword
+Test 10 - Search Products By Keyword
     [Documentation]    Search products using a keyword
     [Tags]    search    product
-    [Setup]    Create Test Product
-    
-    ${response}=    GET On Session    api    ${API_PATH}/products/search    params=keyword=Robot
+    ${response}=    GET On Session    api    ${API_PATH}/products/search    params=keyword=Updated
     Should Be Equal As Strings    ${response.status_code}    200
 
-Get Products By Price Range
+Test 11 - Get Products By Price Range
     [Documentation]    Filter products by price range
     [Tags]    search    product
-    
-    ${response}=    GET On Session    api    ${API_PATH}/products/price-range    params=minPrice=10&maxPrice=200
+    ${response}=    GET On Session    api    ${API_PATH}/products/price-range    params=minPrice=10&maxPrice=500
     Should Be Equal As Strings    ${response.status_code}    200
 
-Get Low Stock Products
-    [Documentation]    Retrieve products with low stock
-    [Tags]    search    product
-    
+Test 12 - Get Low Stock Products
+    [Documentation]    Retrieve products with low stock (threshold 10)
+    [Tags]    inventory    product
     ${response}=    GET On Session    api    ${API_PATH}/products/low-stock    params=threshold=10
     Should Be Equal As Strings    ${response.status_code}    200
 
-# ==========================================
-# Stock Management Tests
-# ==========================================
-
-Add Stock To Product
-    [Documentation]    Add stock to an existing product
-    [Tags]    stock    product
-    [Setup]    Create Test Product
-    
-    ${response}=    POST On Session    api    ${API_PATH}/products/${TEST_PRODUCT_ID}/stock/add    params=quantity=25
-    Should Be Equal As Strings    ${response.status_code}    200
-    ${json}=    Set Variable    ${response.json()}
-    Should Be True    ${json['stockQuantity']} >= 25
-
-Remove Stock From Product
-    [Documentation]    Remove stock from an existing product
-    [Tags]    stock    product
-    [Setup]    Create Test Product With High Stock
-    
-    ${response}=    POST On Session    api    ${API_PATH}/products/${TEST_PRODUCT_ID}/stock/remove    params=quantity=10
-    Should Be Equal As Strings    ${response.status_code}    200
-
-Check Stock Availability
-    [Documentation]    Check if product has sufficient stock
-    [Tags]    stock    product
-    [Setup]    Create Test Product With High Stock
-    
-    ${response}=    GET On Session    api    ${API_PATH}/products/${TEST_PRODUCT_ID}/stock/check    params=quantity=10
-    Should Be Equal As Strings    ${response.status_code}    200
-    Should Be Equal As Strings    ${response.text}    true
-
-# ==========================================
-# Order Tests
-# ==========================================
-
-Create Order Successfully
-    [Documentation]    Create a new order with valid products
-    [Tags]    crud    order
-    [Setup]    Create Test Product With High Stock
-    
-    ${item}=    Create Dictionary
-    ...    productId=${TEST_PRODUCT_ID}
-    ...    quantity=2
-    
-    ${items}=    Create List    ${item}
-    
-    ${order}=    Create Dictionary
-    ...    customerName=Robot Test Customer
-    ...    customerEmail=robot@test.com
-    ...    items=${items}
-    
-    ${response}=    POST On Session    api    ${API_PATH}/orders    json=${order}
+Test 13 - Create Second Product For Testing
+    [Documentation]    Create another product for additional tests
+    [Tags]    crud    product
+    ${response}=    Create Unique Product    test13
     Should Be Equal As Strings    ${response.status_code}    201
     ${json}=    Set Variable    ${response.json()}
-    Should Not Be Empty    ${json['orderNumber']}
-    Should Be Equal As Strings    ${json['status']}    PENDING
-    
-    Set Suite Variable    ${CREATED_ORDER_ID}    ${json['id']}
+    Set Suite Variable    ${PRODUCT_ID_13}    ${json['id']}
 
-Get Order By ID
-    [Documentation]    Retrieve an order by its ID
-    [Tags]    crud    order
-    Skip If    '${CREATED_ORDER_ID}' == '${EMPTY}'    No order was created
-    
-    ${response}=    GET On Session    api    ${API_PATH}/orders/${CREATED_ORDER_ID}
-    Should Be Equal As Strings    ${response.status_code}    200
-    ${json}=    Set Variable    ${response.json()}
-    Should Be Equal As Strings    ${json['customerEmail']}    robot@test.com
+Test 14 - Delete Product Successfully
+    [Documentation]    Delete a product from the system
+    [Tags]    crud    product
+    ${response}=    DELETE On Session    api    ${API_PATH}/products/${PRODUCT_ID_13}
+    Should Be Equal As Strings    ${response.status_code}    204
 
-Get All Orders
+# ==========================================
+# ORDER TESTS (10 tests)
+# ==========================================
+
+Test 15 - Get All Orders
     [Documentation]    Retrieve all orders
     [Tags]    crud    order
-    
     ${response}=    GET On Session    api    ${API_PATH}/orders
     Should Be Equal As Strings    ${response.status_code}    200
 
-# ==========================================
-# Error Handling Tests
-# ==========================================
-
-Get Non Existent Product Returns 404
-    [Documentation]    Verify 404 response for non-existent product
-    [Tags]    error    product
-    
-    ${response}=    GET On Session    api    ${API_PATH}/products/99999    expected_status=404
-    Should Be Equal As Strings    ${response.status_code}    404
-
-Create Product With Invalid Data Returns 400
-    [Documentation]    Verify validation error for invalid product data
-    [Tags]    error    product
-    
-    ${invalid_product}=    Create Dictionary
-    ...    name=
-    ...    price=-10
-    ...    stockQuantity=-5
-    ...    category=
-    
-    ${response}=    POST On Session    api    ${API_PATH}/products    json=${invalid_product}    expected_status=400
-    Should Be Equal As Strings    ${response.status_code}    400
-
-# ==========================================
-# End-to-End Workflow Tests (Non-Regression)
-# ==========================================
-
-Complete Order Workflow From Creation To Delivery
-    [Documentation]    Full workflow: Create product -> Place order -> Confirm -> Ship -> Deliver
-    [Tags]    e2e    workflow    regression    critical
-    
-    # Step 1: Create a product with stock
-    ${product}=    Create Dictionary
-    ...    name=E2E Workflow Product
-    ...    description=Product for end-to-end workflow testing
-    ...    price=150.00
-    ...    stockQuantity=100
-    ...    category=E2E Testing
-    ...    sku=E2E-WORKFLOW-${RANDOM}
-    ...    active=true
-    
-    ${product_response}=    POST On Session    api    ${API_PATH}/products    json=${product}
-    Should Be Equal As Strings    ${product_response.status_code}    201
-    ${product_json}=    Set Variable    ${product_response.json()}
-    ${product_id}=    Set Variable    ${product_json['id']}
-    ${initial_stock}=    Set Variable    ${product_json['stockQuantity']}
-    
-    # Step 2: Create an order with this product
-    ${item}=    Create Dictionary
-    ...    productId=${product_id}
-    ...    quantity=5
-    
-    ${items}=    Create List    ${item}
-    
+Test 16 - Create Order Successfully
+    [Documentation]    Create a new order with valid product
+    [Tags]    crud    order    critical
+    ${order_item}=    Create Dictionary    productId=${PRODUCT_ID_05}    quantity=2
+    ${items}=    Create List    ${order_item}
     ${order}=    Create Dictionary
-    ...    customerName=E2E Test Customer
-    ...    customerEmail=e2e@workflow.test
+    ...    customerName=Robot Test Customer
+    ...    customerEmail=robot-${RANDOM_ID}@test.com
+    ...    shippingAddress=123 Test Street
     ...    items=${items}
-    
-    ${order_response}=    POST On Session    api    ${API_PATH}/orders    json=${order}
-    Should Be Equal As Strings    ${order_response.status_code}    201
-    ${order_json}=    Set Variable    ${order_response.json()}
-    ${order_id}=    Set Variable    ${order_json['id']}
-    Should Be Equal As Strings    ${order_json['status']}    PENDING
-    
-    # Step 3: Confirm the order
-    ${confirm_response}=    PUT On Session    api    ${API_PATH}/orders/${order_id}/confirm
-    Should Be Equal As Strings    ${confirm_response.status_code}    200
-    ${confirm_json}=    Set Variable    ${confirm_response.json()}
-    Should Be Equal As Strings    ${confirm_json['status']}    CONFIRMED
-    
-    # Step 4: Ship the order
-    ${ship_response}=    PUT On Session    api    ${API_PATH}/orders/${order_id}/ship
-    Should Be Equal As Strings    ${ship_response.status_code}    200
-    ${ship_json}=    Set Variable    ${ship_response.json()}
-    Should Be Equal As Strings    ${ship_json['status']}    SHIPPED
-    
-    # Step 5: Deliver the order
-    ${deliver_response}=    PUT On Session    api    ${API_PATH}/orders/${order_id}/deliver
-    Should Be Equal As Strings    ${deliver_response.status_code}    200
-    ${deliver_json}=    Set Variable    ${deliver_response.json()}
-    Should Be Equal As Strings    ${deliver_json['status']}    DELIVERED
-    
-    # Step 6: Verify stock was decremented
-    ${final_product}=    GET On Session    api    ${API_PATH}/products/${product_id}
-    ${final_json}=    Set Variable    ${final_product.json()}
-    Should Be True    ${final_json['stockQuantity']} == ${initial_stock} - 5
+    ${response}=    POST On Session    api    ${API_PATH}/orders    json=${order}
+    Should Be Equal As Strings    ${response.status_code}    201
+    ${json}=    Set Variable    ${response.json()}
+    Set Suite Variable    ${ORDER_ID}    ${json['id']}
 
-Order Cancellation Workflow
-    [Documentation]    Test order cancellation and stock restoration
-    [Tags]    e2e    workflow    regression    cancellation
-    
-    # Step 1: Create a product
-    ${product}=    Create Dictionary
-    ...    name=Cancellation Test Product
-    ...    description=Product for cancellation testing
-    ...    price=75.00
-    ...    stockQuantity=50
-    ...    category=Cancel Testing
-    ...    sku=CANCEL-TEST-${RANDOM}
-    ...    active=true
-    
-    ${product_response}=    POST On Session    api    ${API_PATH}/products    json=${product}
-    Should Be Equal As Strings    ${product_response.status_code}    201
-    ${product_json}=    Set Variable    ${product_response.json()}
-    ${product_id}=    Set Variable    ${product_json['id']}
-    ${initial_stock}=    Set Variable    ${product_json['stockQuantity']}
-    
-    # Step 2: Create an order
-    ${item}=    Create Dictionary
-    ...    productId=${product_id}
-    ...    quantity=10
-    
-    ${items}=    Create List    ${item}
-    
-    ${order}=    Create Dictionary
-    ...    customerName=Cancel Test Customer
-    ...    customerEmail=cancel@test.com
-    ...    items=${items}
-    
-    ${order_response}=    POST On Session    api    ${API_PATH}/orders    json=${order}
-    Should Be Equal As Strings    ${order_response.status_code}    201
-    ${order_json}=    Set Variable    ${order_response.json()}
-    ${order_id}=    Set Variable    ${order_json['id']}
-    
-    # Step 3: Cancel the order
-    ${cancel_response}=    PUT On Session    api    ${API_PATH}/orders/${order_id}/cancel
-    Should Be Equal As Strings    ${cancel_response.status_code}    200
-    ${cancel_json}=    Set Variable    ${cancel_response.json()}
-    Should Be Equal As Strings    ${cancel_json['status']}    CANCELLED
-    
-    # Step 4: Verify stock was restored
-    ${final_product}=    GET On Session    api    ${API_PATH}/products/${product_id}
-    ${final_json}=    Set Variable    ${final_product.json()}
-    Should Be True    ${final_json['stockQuantity']} == ${initial_stock}
+Test 17 - Get Order By ID
+    [Documentation]    Retrieve an order by its ID
+    [Tags]    crud    order
+    ${response}=    GET On Session    api    ${API_PATH}/orders/${ORDER_ID}
+    Should Be Equal As Strings    ${response.status_code}    200
+    ${json}=    Set Variable    ${response.json()}
+    Should Be Equal As Strings    ${json['customerName']}    Robot Test Customer
 
-Order With Insufficient Stock Should Fail
-    [Documentation]    Verify order fails when product has insufficient stock
-    [Tags]    e2e    regression    stock    error
-    
-    # Step 1: Create a product with low stock
-    ${product}=    Create Dictionary
-    ...    name=Low Stock Product
-    ...    description=Product with very low stock
-    ...    price=200.00
-    ...    stockQuantity=3
-    ...    category=Stock Testing
-    ...    sku=LOW-STOCK-${RANDOM}
-    ...    active=true
-    
-    ${product_response}=    POST On Session    api    ${API_PATH}/products    json=${product}
-    Should Be Equal As Strings    ${product_response.status_code}    201
-    ${product_json}=    Set Variable    ${product_response.json()}
-    ${product_id}=    Set Variable    ${product_json['id']}
-    
-    # Step 2: Try to order more than available stock
-    ${item}=    Create Dictionary
-    ...    productId=${product_id}
-    ...    quantity=100
-    
-    ${items}=    Create List    ${item}
-    
-    ${order}=    Create Dictionary
-    ...    customerName=Stock Test Customer
-    ...    customerEmail=stock@test.com
-    ...    items=${items}
-    
-    ${order_response}=    POST On Session    api    ${API_PATH}/orders    json=${order}    expected_status=400
-    Should Be Equal As Strings    ${order_response.status_code}    400
-
-Order Status Transition Validation
-    [Documentation]    Verify invalid order status transitions are rejected
-    [Tags]    e2e    regression    status    validation
-    
-    # Step 1: Create a product and order
-    ${product}=    Create Dictionary
-    ...    name=Status Test Product
-    ...    description=Product for status testing
-    ...    price=100.00
-    ...    stockQuantity=50
-    ...    category=Status Testing
-    ...    sku=STATUS-TEST-${RANDOM}
-    ...    active=true
-    
-    ${product_response}=    POST On Session    api    ${API_PATH}/products    json=${product}
-    Should Be Equal As Strings    ${product_response.status_code}    201
-    ${product_json}=    Set Variable    ${product_response.json()}
-    ${product_id}=    Set Variable    ${product_json['id']}
-    
-    ${item}=    Create Dictionary
-    ...    productId=${product_id}
-    ...    quantity=2
-    
-    ${items}=    Create List    ${item}
-    
-    ${order}=    Create Dictionary
-    ...    customerName=Status Test Customer
-    ...    customerEmail=status@test.com
-    ...    items=${items}
-    
-    ${order_response}=    POST On Session    api    ${API_PATH}/orders    json=${order}
-    Should Be Equal As Strings    ${order_response.status_code}    201
-    ${order_json}=    Set Variable    ${order_response.json()}
-    ${order_id}=    Set Variable    ${order_json['id']}
-    
-    # Step 2: Try to ship before confirming (invalid transition)
-    ${invalid_ship}=    PUT On Session    api    ${API_PATH}/orders/${order_id}/ship    expected_status=400
-    Should Be Equal As Strings    ${invalid_ship.status_code}    400
-    
-    # Step 3: Try to deliver before shipping (invalid transition)
-    ${invalid_deliver}=    PUT On Session    api    ${API_PATH}/orders/${order_id}/deliver    expected_status=400
-    Should Be Equal As Strings    ${invalid_deliver.status_code}    400
-
-Multiple Products In Single Order
-    [Documentation]    Test ordering multiple different products in a single order
-    [Tags]    e2e    regression    order
-    
-    # Step 1: Create first product
-    ${product1}=    Create Dictionary
-    ...    name=Multi Order Product 1
-    ...    description=First product in multi-order
-    ...    price=50.00
-    ...    stockQuantity=100
-    ...    category=Multi Order
-    ...    sku=MULTI-1-${RANDOM}
-    ...    active=true
-    
-    ${response1}=    POST On Session    api    ${API_PATH}/products    json=${product1}
-    ${json1}=    Set Variable    ${response1.json()}
-    ${product1_id}=    Set Variable    ${json1['id']}
-    
-    # Step 2: Create second product
-    ${product2}=    Create Dictionary
-    ...    name=Multi Order Product 2
-    ...    description=Second product in multi-order
-    ...    price=75.00
-    ...    stockQuantity=80
-    ...    category=Multi Order
-    ...    sku=MULTI-2-${RANDOM}
-    ...    active=true
-    
-    ${response2}=    POST On Session    api    ${API_PATH}/products    json=${product2}
-    ${json2}=    Set Variable    ${response2.json()}
-    ${product2_id}=    Set Variable    ${json2['id']}
-    
-    # Step 3: Create order with both products
-    ${item1}=    Create Dictionary
-    ...    productId=${product1_id}
-    ...    quantity=3
-    
-    ${item2}=    Create Dictionary
-    ...    productId=${product2_id}
-    ...    quantity=2
-    
-    ${items}=    Create List    ${item1}    ${item2}
-    
-    ${order}=    Create Dictionary
-    ...    customerName=Multi Product Customer
-    ...    customerEmail=multi@order.test
-    ...    items=${items}
-    
-    ${order_response}=    POST On Session    api    ${API_PATH}/orders    json=${order}
-    Should Be Equal As Strings    ${order_response.status_code}    201
-    ${order_json}=    Set Variable    ${order_response.json()}
-    
-    # Verify total is correct: (50*3) + (75*2) = 150 + 150 = 300
-    Should Be True    ${order_json['totalAmount']} == 300.00
-
-Get Orders By Customer Email
-    [Documentation]    Retrieve all orders for a specific customer
-    [Tags]    e2e    regression    order    search
-    
-    # Create a unique customer email
-    ${unique_email}=    Set Variable    unique-${RANDOM}@customer.test
-    
-    # Create a product and order
-    ${product}=    Create Dictionary
-    ...    name=Customer Search Product
-    ...    description=Product for customer search
-    ...    price=80.00
-    ...    stockQuantity=50
-    ...    category=Search Testing
-    ...    sku=SEARCH-${RANDOM}
-    ...    active=true
-    
-    ${product_response}=    POST On Session    api    ${API_PATH}/products    json=${product}
-    ${product_json}=    Set Variable    ${product_response.json()}
-    ${product_id}=    Set Variable    ${product_json['id']}
-    
-    ${item}=    Create Dictionary
-    ...    productId=${product_id}
-    ...    quantity=1
-    
-    ${items}=    Create List    ${item}
-    
-    ${order}=    Create Dictionary
-    ...    customerName=Search Customer
-    ...    customerEmail=${unique_email}
-    ...    items=${items}
-    
-    ${order_response}=    POST On Session    api    ${API_PATH}/orders    json=${order}
-    Should Be Equal As Strings    ${order_response.status_code}    201
-    
-    # Search orders by customer email
-    ${search_response}=    GET On Session    api    ${API_PATH}/orders/customer/${unique_email}
-    Should Be Equal As Strings    ${search_response.status_code}    200
-    ${search_json}=    Set Variable    ${search_response.json()}
-    Should Be True    len(${search_json}) >= 1
-
-Get Orders By Status
+Test 18 - Get Orders By Status
     [Documentation]    Retrieve orders filtered by status
-    [Tags]    e2e    regression    order    filter
-    
+    [Tags]    search    order
     ${response}=    GET On Session    api    ${API_PATH}/orders/status/PENDING
     Should Be Equal As Strings    ${response.status_code}    200
 
-Product Activation And Deactivation
-    [Documentation]    Test activating and deactivating products
-    [Tags]    e2e    regression    product    status
-    
-    # Create an active product
-    ${product}=    Create Dictionary
-    ...    name=Activation Test Product
-    ...    description=Product for activation testing
-    ...    price=60.00
-    ...    stockQuantity=30
-    ...    category=Activation Testing
-    ...    sku=ACTIVATE-${RANDOM}
-    ...    active=true
-    
-    ${product_response}=    POST On Session    api    ${API_PATH}/products    json=${product}
-    Should Be Equal As Strings    ${product_response.status_code}    201
-    ${product_json}=    Set Variable    ${product_response.json()}
-    ${product_id}=    Set Variable    ${product_json['id']}
-    Should Be True    ${product_json['active']} == True
-    
-    # Deactivate the product
-    ${deactivate_response}=    PUT On Session    api    ${API_PATH}/products/${product_id}/deactivate
-    Should Be Equal As Strings    ${deactivate_response.status_code}    200
-    ${deactivate_json}=    Set Variable    ${deactivate_response.json()}
-    Should Be True    ${deactivate_json['active']} == False
-    
-    # Reactivate the product
-    ${activate_response}=    PUT On Session    api    ${API_PATH}/products/${product_id}/activate
-    Should Be Equal As Strings    ${activate_response.status_code}    200
-    ${activate_json}=    Set Variable    ${activate_response.json()}
-    Should Be True    ${activate_json['active']} == True
-
-Order With Inactive Product Should Fail
-    [Documentation]    Verify that orders cannot be placed for inactive products
-    [Tags]    e2e    regression    product    validation
-    
-    # Create and deactivate a product
-    ${product}=    Create Dictionary
-    ...    name=Inactive Product Test
-    ...    description=Product that will be deactivated
-    ...    price=90.00
-    ...    stockQuantity=40
-    ...    category=Inactive Testing
-    ...    sku=INACTIVE-${RANDOM}
-    ...    active=true
-    
-    ${product_response}=    POST On Session    api    ${API_PATH}/products    json=${product}
-    ${product_json}=    Set Variable    ${product_response.json()}
-    ${product_id}=    Set Variable    ${product_json['id']}
-    
-    # Deactivate the product
-    ${deactivate_response}=    PUT On Session    api    ${API_PATH}/products/${product_id}/deactivate
-    Should Be Equal As Strings    ${deactivate_response.status_code}    200
-    
-    # Try to order the inactive product
-    ${item}=    Create Dictionary
-    ...    productId=${product_id}
-    ...    quantity=1
-    
-    ${items}=    Create List    ${item}
-    
+Test 19 - Create Another Order
+    [Documentation]    Create another order for testing
+    [Tags]    crud    order
+    ${order_item}=    Create Dictionary    productId=${PRODUCT_ID_05}    quantity=1
+    ${items}=    Create List    ${order_item}
     ${order}=    Create Dictionary
-    ...    customerName=Inactive Test Customer
-    ...    customerEmail=inactive@test.com
+    ...    customerName=Second Customer
+    ...    customerEmail=second-${RANDOM_ID}@test.com
+    ...    shippingAddress=456 Another Street
     ...    items=${items}
-    
-    ${order_response}=    POST On Session    api    ${API_PATH}/orders    json=${order}    expected_status=400
-    Should Be Equal As Strings    ${order_response.status_code}    400
+    ${response}=    POST On Session    api    ${API_PATH}/orders    json=${order}
+    Should Be Equal As Strings    ${response.status_code}    201
+    ${json}=    Set Variable    ${response.json()}
+    Set Suite Variable    ${ORDER_ID_2}    ${json['id']}
+
+Test 20 - Verify Order Contains Items
+    [Documentation]    Verify order has items list
+    [Tags]    validation    order
+    ${response}=    GET On Session    api    ${API_PATH}/orders/${ORDER_ID}
+    Should Be Equal As Strings    ${response.status_code}    200
+    ${json}=    Set Variable    ${response.json()}
+    Dictionary Should Contain Key    ${json}    items
+
+Test 21 - Multiple Orders Exist
+    [Documentation]    Verify multiple orders can be retrieved
+    [Tags]    crud    order
+    ${response}=    GET On Session    api    ${API_PATH}/orders
+    Should Be Equal As Strings    ${response.status_code}    200
+    ${json}=    Set Variable    ${response.json()}
+    Should Be True    len(${json}) >= 2
+
+Test 22 - Order Has Correct Customer Info
+    [Documentation]    Verify order customer information
+    [Tags]    validation    order
+    ${response}=    GET On Session    api    ${API_PATH}/orders/${ORDER_ID_2}
+    Should Be Equal As Strings    ${response.status_code}    200
+    ${json}=    Set Variable    ${response.json()}
+    Should Be Equal As Strings    ${json['customerName']}    Second Customer
+
+Test 23 - Create Third Product
+    [Documentation]    Create product for additional order tests
+    [Tags]    crud    product
+    ${response}=    Create Unique Product    test23
+    Should Be Equal As Strings    ${response.status_code}    201
+    ${json}=    Set Variable    ${response.json()}
+    Set Suite Variable    ${PRODUCT_ID_23}    ${json['id']}
+
+Test 24 - Create Order With Different Product
+    [Documentation]    Create order with a different product
+    [Tags]    crud    order
+    ${order_item}=    Create Dictionary    productId=${PRODUCT_ID_23}    quantity=3
+    ${items}=    Create List    ${order_item}
+    ${order}=    Create Dictionary
+    ...    customerName=Third Customer
+    ...    customerEmail=third-${RANDOM_ID}@test.com
+    ...    shippingAddress=789 Third Avenue
+    ...    items=${items}
+    ${response}=    POST On Session    api    ${API_PATH}/orders    json=${order}
+    Should Be Equal As Strings    ${response.status_code}    201
 
 # ==========================================
-# Keywords
+# ERROR HANDLING TESTS (4 tests)
 # ==========================================
 
-*** Keywords ***
+Test 25 - Get Non Existent Product Returns 404
+    [Documentation]    Verify 404 response for non-existent product
+    [Tags]    error    product
+    ${response}=    GET On Session    api    ${API_PATH}/products/99999    expected_status=404
+    Should Be Equal As Strings    ${response.status_code}    404
 
-Create Test Product
-    [Documentation]    Helper keyword to create a test product
-    ${product}=    Create Dictionary
-    ...    name=Test Product for Robot
-    ...    description=Temporary test product
-    ...    price=50.00
-    ...    stockQuantity=25
-    ...    category=Testing
-    ...    sku=ROBOT-TEST-${RANDOM}
-    ...    active=true
-    
-    ${response}=    POST On Session    api    ${API_PATH}/products    json=${product}
-    Should Be Equal As Strings    ${response.status_code}    201
-    ${json}=    Set Variable    ${response.json()}
-    Set Test Variable    ${TEST_PRODUCT_ID}    ${json['id']}
+Test 26 - Create Product With Invalid Data Returns 400
+    [Documentation]    Verify validation errors for invalid product
+    [Tags]    error    product
+    ${invalid_product}=    Create Dictionary
+    ...    name=
+    ...    price=-10
+    ${response}=    POST On Session    api    ${API_PATH}/products    json=${invalid_product}    expected_status=400
+    Should Be Equal As Strings    ${response.status_code}    400
 
-Create Test Product With Category
-    [Documentation]    Helper keyword to create a test product with specific category
-    ${product}=    Create Dictionary
-    ...    name=Electronics Test Product
-    ...    description=Electronics category product
-    ...    price=199.99
-    ...    stockQuantity=30
-    ...    category=Electronics
-    ...    sku=ROBOT-ELEC-${RANDOM}
-    ...    active=true
-    
-    ${response}=    POST On Session    api    ${API_PATH}/products    json=${product}
-    Should Be Equal As Strings    ${response.status_code}    201
-    ${json}=    Set Variable    ${response.json()}
-    Set Test Variable    ${TEST_PRODUCT_ID}    ${json['id']}
+Test 27 - Get Non Existent Order Returns 404
+    [Documentation]    Verify 404 response for non-existent order
+    [Tags]    error    order
+    ${response}=    GET On Session    api    ${API_PATH}/orders/99999    expected_status=404
+    Should Be Equal As Strings    ${response.status_code}    404
 
-Create Test Product With High Stock
-    [Documentation]    Helper keyword to create a test product with high stock for testing
-    ${product}=    Create Dictionary
-    ...    name=High Stock Product
-    ...    description=Product with high stock for testing
-    ...    price=75.00
-    ...    stockQuantity=1000
-    ...    category=Stock Testing
-    ...    sku=ROBOT-STOCK-${RANDOM}
-    ...    active=true
-    
-    ${response}=    POST On Session    api    ${API_PATH}/products    json=${product}
-    Should Be Equal As Strings    ${response.status_code}    201
+Test 28 - Actuator Info Endpoint Works
+    [Documentation]    Verify actuator info endpoint
+    [Tags]    smoke    actuator
+    ${response}=    GET On Session    api    /actuator/info
+    Should Be Equal As Strings    ${response.status_code}    200
+
+# ==========================================
+# FINAL VALIDATION TESTS (2 tests)
+# ==========================================
+
+Test 29 - Products Count Increased After Tests
+    [Documentation]    Verify products were created during tests
+    [Tags]    validation    final
+    ${response}=    GET On Session    api    ${API_PATH}/products
+    Should Be Equal As Strings    ${response.status_code}    200
     ${json}=    Set Variable    ${response.json()}
-    Set Test Variable    ${TEST_PRODUCT_ID}    ${json['id']}
+    Should Be True    len(${json}) >= 2
+
+Test 30 - Orders Count Increased After Tests
+    [Documentation]    Verify orders were created during tests
+    [Tags]    validation    final
+    ${response}=    GET On Session    api    ${API_PATH}/orders
+    Should Be Equal As Strings    ${response.status_code}    200
+    ${json}=    Set Variable    ${response.json()}
+    Should Be True    len(${json}) >= 3

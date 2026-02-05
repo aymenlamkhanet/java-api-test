@@ -233,7 +233,7 @@ pipeline {
                         docker rm -f product-service-test || true
                         docker run -d \
                             --name product-service-test \
-                            -p 8888:8080 \
+                            --network ci-network \
                             -e SPRING_PROFILES_ACTIVE=docker \
                             ${IMAGE_NAME}:${BUILD_TAG}
                     """
@@ -241,7 +241,7 @@ pipeline {
                     echo "⏳ Attente du démarrage de l'application..."
                     sh '''
                         for i in $(seq 1 30); do
-                            if curl -s http://localhost:8888/actuator/health | grep -q "UP"; then
+                            if curl -s http://product-service-test:8080/actuator/health | grep -q "UP"; then
                                 echo "✅ Application UP après $i tentatives"
                                 exit 0
                             fi
@@ -274,12 +274,12 @@ pipeline {
                 sh '''
                     mkdir -p robot-reports
                     docker run --rm \
-                        --network host \
+                        --network ci-network \
                         -v "${WORKSPACE}/robot-tests":/tests \
                         -v "${WORKSPACE}/robot-reports":/reports \
                         ppodgorsek/robot-framework:latest \
                         robot \
-                            --variable BASE_URL:http://localhost:8888 \
+                            --variable BASE_URL:http://product-service-test:8080 \
                             --outputdir /reports \
                             --xunit xunit.xml \
                             --log log.html \

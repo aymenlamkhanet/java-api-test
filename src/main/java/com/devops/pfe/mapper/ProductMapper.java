@@ -37,7 +37,7 @@ public class ProductMapper {
                 .stockQuantity(dto.getStockQuantity())
                 .category(dto.getCategory())
                 .sku(dto.getSku())
-                .active(dto.getActive() != null ? dto.getActive() : true)
+                .active(!Boolean.FALSE.equals(dto.getActive()))
                 .build();
     }
 

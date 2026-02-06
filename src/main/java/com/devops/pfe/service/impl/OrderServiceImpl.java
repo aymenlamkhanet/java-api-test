@@ -23,7 +23,6 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -103,7 +102,7 @@ public class OrderServiceImpl implements OrderService {
         log.debug("Récupération de toutes les commandes");
         return orderRepository.findAll().stream()
                 .map(orderMapper::toDTO)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override
@@ -112,7 +111,7 @@ public class OrderServiceImpl implements OrderService {
         log.debug("Recherche des commandes pour le client: {}", email);
         return orderRepository.findByCustomerEmail(email).stream()
                 .map(orderMapper::toDTO)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override
@@ -163,7 +162,7 @@ public class OrderServiceImpl implements OrderService {
         log.debug("Recherche des commandes avec le statut: {}", status);
         return orderRepository.findByStatus(status).stream()
                 .map(orderMapper::toDTO)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override
@@ -172,7 +171,7 @@ public class OrderServiceImpl implements OrderService {
         log.debug("Recherche des commandes entre {} et {}", start, end);
         return orderRepository.findByDateRange(start, end).stream()
                 .map(orderMapper::toDTO)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override

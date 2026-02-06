@@ -28,7 +28,7 @@ import java.util.Map;
  */
 @RestController
 @RequestMapping("/api/v1/files")
-@CrossOrigin(origins = "*")
+@CrossOrigin(origins = "${cors.allowed-origins:http://localhost:3000,http://localhost:4200}")
 public class FileController {
 
     private final FileService fileService;

@@ -168,8 +168,9 @@ class ProductRepositoryTest {
     void shouldFindAllDistinctCategories() {
         List<String> categories = productRepository.findAllCategories();
 
-        assertThat(categories).hasSize(2); // Electronics and Furniture (Desk is now active)
-        assertThat(categories).containsExactlyInAnyOrder("Electronics", "Furniture");
+        assertThat(categories)
+                .hasSize(2) // Electronics and Furniture (Desk is now active)
+                .containsExactlyInAnyOrder("Electronics", "Furniture");
     }
 
     @Test

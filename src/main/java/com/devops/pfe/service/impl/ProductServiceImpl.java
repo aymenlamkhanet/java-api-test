@@ -16,7 +16,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -66,7 +65,7 @@ public class ProductServiceImpl implements ProductService {
         log.debug("Récupération de tous les produits");
         return productRepository.findAll().stream()
                 .map(productMapper::toDTO)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override
@@ -75,7 +74,7 @@ public class ProductServiceImpl implements ProductService {
         log.debug("Récupération des produits actifs");
         return productRepository.findByActiveTrue().stream()
                 .map(productMapper::toDTO)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override
@@ -112,7 +111,7 @@ public class ProductServiceImpl implements ProductService {
         log.debug("Recherche des produits par catégorie: {}", category);
         return productRepository.findByCategory(category).stream()
                 .map(productMapper::toDTO)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override
@@ -121,7 +120,7 @@ public class ProductServiceImpl implements ProductService {
         log.debug("Recherche de produits avec le mot-clé: {}", keyword);
         return productRepository.searchByKeyword(keyword).stream()
                 .map(productMapper::toDTO)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override
@@ -130,7 +129,7 @@ public class ProductServiceImpl implements ProductService {
         log.debug("Recherche des produits entre {} et {}", minPrice, maxPrice);
         return productRepository.findByPriceRange(minPrice, maxPrice).stream()
                 .map(productMapper::toDTO)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override
@@ -139,7 +138,7 @@ public class ProductServiceImpl implements ProductService {
         log.debug("Recherche des produits avec stock bas (seuil: {})", threshold);
         return productRepository.findLowStockProducts(threshold).stream()
                 .map(productMapper::toDTO)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override

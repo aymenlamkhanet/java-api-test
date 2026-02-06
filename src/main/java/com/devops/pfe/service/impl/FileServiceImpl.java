@@ -12,7 +12,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * Implémentation du service de gestion des fichiers.
@@ -24,19 +23,8 @@ public class FileServiceImpl implements FileService {
 
     private final FileRepository fileRepository;
 
-    // Types de fichiers autorisés
-    private static final List<String> ALLOWED_CONTENT_TYPES = List.of(
-            "application/pdf",
-            "image/jpeg",
-            "image/png",
-            "image/gif",
-            "text/plain",
-            "application/json",
-            "application/xml"
-    );
-
     // Taille maximale: 10 MB
-    private static final long MAX_FILE_SIZE = 10 * 1024 * 1024;
+    private static final long MAX_FILE_SIZE = 10L * 1024L * 1024L;
 
     @Autowired
     public FileServiceImpl(FileRepository fileRepository) {
@@ -77,7 +65,7 @@ public class FileServiceImpl implements FileService {
             return mapToDTO(saved);
 
         } catch (IOException e) {
-            throw new RuntimeException("Erreur lors de la lecture du fichier: " + e.getMessage(), e);
+            throw new IllegalStateException("Erreur lors de la lecture du fichier: " + e.getMessage(), e);
         }
     }
 
@@ -101,7 +89,7 @@ public class FileServiceImpl implements FileService {
     public List<FileDTO> getAllFiles() {
         return fileRepository.findAll().stream()
                 .map(this::mapToDTO)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override
@@ -117,7 +105,7 @@ public class FileServiceImpl implements FileService {
     public List<FileDTO> searchFiles(String keyword) {
         return fileRepository.findByFileNameContainingIgnoreCase(keyword).stream()
                 .map(this::mapToDTO)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override

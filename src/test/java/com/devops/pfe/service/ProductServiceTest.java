@@ -187,7 +187,7 @@ class ProductServiceTest {
             when(productMapper.toDTO(product)).thenReturn(productDTO);
 
             // When
-            ProductDTO result = productService.updateStock(1L, 50);
+            productService.updateStock(1L, 50);
 
             // Then
             assertThat(product.getStockQuantity()).isEqualTo(50);

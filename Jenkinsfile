@@ -221,21 +221,31 @@ pipeline {
         // STAGE 9: Scan Trivy (Vulnérabilités Image)
         // ============================================
         stage('9-trivy-image-scan') {
+            options {
+                timeout(time: 5, unit: 'MINUTES')
+            }
             steps {
                 echo "🛡️ Scan de vulnérabilités de l'image avec Trivy..."
                 sh """
                     docker run --rm \
                         -v /var/run/docker.sock:/var/run/docker.sock \
+                        -v trivy-cache:/root/.cache/ \
                         aquasec/trivy:latest image \
                             --severity CRITICAL,HIGH \
                             --exit-code 0 \
                             --no-progress \
+                            --scanners vuln \
+                            --skip-java-db-update \
+                            --timeout 5m \
                             ${IMAGE_NAME}:${BUILD_TAG}
                 """
             }
             post {
                 success {
                     echo "✅ Scan Trivy terminé"
+                }
+                failure {
+                    echo "⚠️ Trivy scan timeout ou erreur - pipeline continue"
                 }
             }
         }

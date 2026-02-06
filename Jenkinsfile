@@ -148,13 +148,14 @@ pipeline {
                         
                         // Récupérer les métriques détaillées
                         def metricsJson = sh(
-                            script: 'curl -s -u $SONAR_TOKEN: "${SONAR_HOST_URL}/api/measures/component?component=${SONAR_PROJECT_KEY}&metricKeys=bugs,vulnerabilities,code_smells,coverage,duplicated_lines_density,security_hotspots,ncloc,new_coverage,new_duplicated_lines_density"',
+                            script: 'curl -s -u $SONAR_TOKEN: "${SONAR_HOST_URL}/api/measures/component?component=${SONAR_PROJECT_KEY}&metricKeys=bugs,vulnerabilities,code_smells,coverage,duplicated_lines_density,security_hotspots"',
                             returnStdout: true
                         ).trim()
                         
-                        // Parser le JSON du Quality Gate
-                        def qualityGate = readJSON text: qualityGateJson
-                        def metrics = readJSON text: metricsJson
+                        // Parser le JSON avec Groovy JsonSlurper
+                        def jsonSlurper = new groovy.json.JsonSlurper()
+                        def qualityGate = jsonSlurper.parseText(qualityGateJson)
+                        def metrics = jsonSlurper.parseText(metricsJson)
                         
                         // Extraire le statut global
                         def qgStatus = qualityGate.projectStatus?.status ?: 'UNKNOWN'
@@ -168,9 +169,7 @@ pipeline {
                         
                         // Valeurs actuelles
                         def coverage = metricsMap['coverage'] ?: 'N/A'
-                        def newCoverage = metricsMap['new_coverage'] ?: 'N/A'
                         def duplications = metricsMap['duplicated_lines_density'] ?: 'N/A'
-                        def newDuplications = metricsMap['new_duplicated_lines_density'] ?: 'N/A'
                         def bugs = metricsMap['bugs'] ?: '0'
                         def vulnerabilities = metricsMap['vulnerabilities'] ?: '0'
                         def codeSmells = metricsMap['code_smells'] ?: '0'
@@ -180,22 +179,22 @@ pipeline {
                         echo "    📊 RAPPORT QUALITY GATE SONARQUBE"
                         echo "=========================================="
                         echo ""
-                        echo "🎯 STATUT GLOBAL: ${qgStatus == 'OK' ? '✅ PASSED' : qgStatus == 'ERROR' ? '❌ FAILED' : '⚠️ ' + qgStatus}"
+                        
+                        def statusIcon = qgStatus == 'OK' ? '✅ PASSED' : (qgStatus == 'ERROR' ? '❌ FAILED' : '⚠️ ' + qgStatus)
+                        echo "🎯 STATUT GLOBAL: ${statusIcon}"
                         echo ""
                         echo "=========================================="
-                        echo "    📈 MÉTRIQUES ACTUELLES"
+                        echo "    📈 CONDITIONS DU QUALITY GATE"
                         echo "=========================================="
-                        echo "│ Métrique                   │ Valeur    │ Seuil     │ Statut │"
-                        echo "├────────────────────────────┼───────────┼───────────┼────────┤"
                         
-                        // Vérifier chaque condition du Quality Gate
+                        // Afficher chaque condition
                         def allPassed = true
                         conditions.each { cond ->
-                            def metric = cond.metricKey
+                            def metric = cond.metricKey ?: 'unknown'
                             def actual = cond.actualValue ?: 'N/A'
                             def threshold = cond.errorThreshold ?: 'N/A'
-                            def status = cond.status
-                            def statusIcon = status == 'OK' ? '✅' : '❌'
+                            def status = cond.status ?: 'UNKNOWN'
+                            def condIcon = status == 'OK' ? '✅' : '❌'
                             
                             if (status != 'OK') {
                                 allPassed = false
@@ -203,29 +202,26 @@ pipeline {
                             
                             // Nom lisible pour la métrique
                             def metricName = metric
-                            switch(metric) {
-                                case 'new_coverage': metricName = 'Couverture (nouveau)'; break
-                                case 'new_duplicated_lines_density': metricName = 'Duplication (nouveau)'; break
-                                case 'new_violations': metricName = 'Violations (nouveau)'; break
-                                case 'new_security_hotspots_reviewed': metricName = 'Hotspots reviewés'; break
-                                case 'coverage': metricName = 'Couverture globale'; break
-                                case 'duplicated_lines_density': metricName = 'Duplication globale'; break
-                            }
+                            if (metric == 'new_coverage') metricName = 'Couverture (nouveau code)'
+                            else if (metric == 'new_duplicated_lines_density') metricName = 'Duplication (nouveau code)'
+                            else if (metric == 'new_violations') metricName = 'Violations (nouveau code)'
+                            else if (metric == 'coverage') metricName = 'Couverture globale'
+                            else if (metric == 'duplicated_lines_density') metricName = 'Duplication globale'
                             
-                            echo "│ ${metricName.padRight(26)} │ ${actual.toString().padRight(9)} │ ${threshold.toString().padRight(9)} │ ${statusIcon}     │"
+                            def comparator = cond.comparator == 'LT' ? '>=' : '<='
+                            echo "${condIcon} ${metricName}: ${actual}% (seuil: ${comparator} ${threshold}%)"
                         }
                         
-                        echo "└────────────────────────────┴───────────┴───────────┴────────┘"
                         echo ""
                         echo "=========================================="
                         echo "    📊 MÉTRIQUES GLOBALES DU PROJET"
                         echo "=========================================="
-                        echo "│ Couverture globale:     ${coverage}%"
-                        echo "│ Duplication globale:    ${duplications}%"
-                        echo "│ Bugs:                   ${bugs}"
-                        echo "│ Vulnérabilités:         ${vulnerabilities}"
-                        echo "│ Code Smells:            ${codeSmells}"
-                        echo "│ Security Hotspots:      ${securityHotspots}"
+                        echo "│ Couverture:         ${coverage}%"
+                        echo "│ Duplication:        ${duplications}%"
+                        echo "│ Bugs:               ${bugs}"
+                        echo "│ Vulnérabilités:     ${vulnerabilities}"
+                        echo "│ Code Smells:        ${codeSmells}"
+                        echo "│ Security Hotspots:  ${securityHotspots}"
                         echo "=========================================="
                         echo ""
                         echo "🔗 Dashboard: ${SONAR_HOST_URL}/dashboard?id=${SONAR_PROJECT_KEY}"
@@ -236,8 +232,11 @@ pipeline {
                             echo "❌ QUALITY GATE FAILED"
                             echo ""
                             echo "📋 Conditions non satisfaites:"
-                            conditions.findAll { it.status != 'OK' }.each { cond ->
-                                echo "   ❌ ${cond.metricKey}: ${cond.actualValue} (requis: ${cond.comparator == 'LT' ? '>=' : '<='} ${cond.errorThreshold})"
+                            conditions.each { cond ->
+                                if (cond.status != 'OK') {
+                                    def comparator = cond.comparator == 'LT' ? '>=' : '<='
+                                    echo "   ❌ ${cond.metricKey}: ${cond.actualValue}% (requis: ${comparator} ${cond.errorThreshold}%)"
+                                }
                             }
                             echo ""
                             error "Quality Gate FAILED - Le code ne respecte pas les standards de qualité"

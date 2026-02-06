@@ -10,20 +10,27 @@ endobj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>
 endobj
 4 0 obj
-<< /Length 178 >>
+<< /Length 280 >>
 stream
 BT
 /F1 24 Tf
 50 700 Td
-(DevOps CI/CD Pipeline - Test Document) Tj
+(DevOps CI/CD Pipeline) Tj
+0 -50 Td
+/F1 16 Tf
+(Test Document for Upload/Download API) Tj
 0 -40 Td
-/F1 14 Tf
-(This PDF file is used for upload/download testing) Tj
-0 -30 Td
+/F1 12 Tf
 (Project: Product Service API) Tj
-0 -30 Td
+0 -25 Td
+(Framework: Spring Boot 3.2.2) Tj
+0 -25 Td
+(Database: H2 In-Memory) Tj
+0 -25 Td
+(Testing: Robot Framework) Tj
+0 -40 Td
 (Author: PFE DevOps Team) Tj
-0 -30 Td
+0 -25 Td
 (Date: February 2026) Tj
 ET
 endstream
@@ -38,9 +45,9 @@ xref
 0000000066 00000 n 
 0000000125 00000 n 
 0000000266 00000 n 
-0000000497 00000 n 
+0000000599 00000 n 
 trailer
 << /Size 6 /Root 1 0 R >>
 startxref
-576
+678
 %%EOF

@@ -169,17 +169,18 @@ pipeline {
                         echo "=========================================="
                         echo ""
                         
-                        if (qualityGate.contains('"status":"OK"')) {
-                            echo "✅ Quality Gate PASSED - Toutes les conditions sont satisfaites!"
-                        } else if (qualityGate.contains('"status":"ERROR"')) {
-                            echo "⚠️ Quality Gate FAILED"
+                        // Vérifier le statut du projet (pas les conditions individuelles)
+                        if (qualityGate.contains('"projectStatus":{"status":"ERROR"')) {
+                            echo "❌ Quality Gate FAILED"
                             echo "📋 Actions requises:"
-                            echo "   1. Révisez les Security Hotspots dans SonarQube"
-                            echo "   2. Réduisez la duplication de code (< 3%)"
-                            echo "   3. Corrigez les nouveaux bugs/vulnérabilités"
+                            echo "   1. Révisez les Security Hotspots dans SonarQube (0% → 100%)"
+                            echo "   2. Réduisez la duplication de code (4.57% → < 3%)"
+                            echo "   3. Corrigez les 5 nouvelles violations"
                             echo ""
                             echo "🔗 Voir détails: ${SONAR_HOST_URL}/dashboard?id=${SONAR_PROJECT_KEY}"
                             // Le pipeline continue mais avec avertissement
+                        } else if (qualityGate.contains('"projectStatus":{"status":"OK"')) {
+                            echo "✅ Quality Gate PASSED - Toutes les conditions sont satisfaites!"
                         } else if (qualityGate.contains('"status":"WARN"')) {
                             echo "⚠️ Quality Gate WARNING - Améliorations recommandées"
                         } else {
@@ -197,19 +198,73 @@ pipeline {
         }
 
         // ============================================
-        // STAGE 6: SCA - Analyse des dépendances (OWASP)
+        // STAGE 6: SCA - Analyse des dépendances (Trivy)
         // ============================================
         stage('6-sca-dependencies') {
             steps {
-                echo "🔐 Analyse des vulnérabilités des dépendances (OWASP)..."
-                sh 'mvn org.owasp:dependency-check-maven:check -B -DfailBuildOnCVSS=9 || true'
+                echo "🔐 Analyse des vulnérabilités des dépendances avec Trivy..."
+                script {
+                    sh '''
+                        echo ""
+                        echo "=========================================="
+                        echo "    🔐 SCA - SOFTWARE COMPOSITION ANALYSIS"
+                        echo "=========================================="
+                        echo ""
+                        echo "📦 Scan des dépendances Maven (pom.xml)"
+                        echo "🔍 Recherche de CVE connues dans les librairies"
+                        echo ""
+                    '''
+                    
+                    // Créer le dossier pour les rapports
+                    sh 'mkdir -p sca-reports'
+                    
+                    // Trivy filesystem scan - analyse pom.xml et les dépendances
+                    sh '''
+                        docker run --rm \
+                            -v $(pwd):/project \
+                            -v $(pwd)/sca-reports:/reports \
+                            aquasec/trivy:latest fs \
+                                --scanners vuln \
+                                --severity CRITICAL,HIGH,MEDIUM \
+                                --format table \
+                                /project
+                    '''
+                    
+                    // Générer un rapport JSON pour archivage
+                    sh '''
+                        docker run --rm \
+                            -v $(pwd):/project \
+                            -v $(pwd)/sca-reports:/reports \
+                            aquasec/trivy:latest fs \
+                                --scanners vuln \
+                                --severity CRITICAL,HIGH,MEDIUM,LOW \
+                                --format json \
+                                --output /reports/sca-report.json \
+                                /project || true
+                    '''
+                    
+                    sh '''
+                        echo ""
+                        echo "=========================================="
+                        echo "    📊 RÉSUMÉ SCA"
+                        echo "=========================================="
+                        echo "✓ Analyse pom.xml: COMPLÉTÉ"
+                        echo "✓ Scan des dépendances transitives: COMPLÉTÉ"
+                        echo "✓ Vérification CVE: COMPLÉTÉ"
+                        echo ""
+                        echo "🔴 CRITICAL/HIGH: À corriger avant production"
+                        echo "🟡 MEDIUM: À planifier"
+                        echo "🟢 LOW: Informatif"
+                        echo "=========================================="
+                    '''
+                }
             }
             post {
                 always {
-                    archiveArtifacts artifacts: 'target/dependency-check-report.*', fingerprint: true, allowEmptyArchive: true
+                    archiveArtifacts artifacts: 'sca-reports/**/*', fingerprint: true, allowEmptyArchive: true
                 }
                 success {
-                    echo "✅ Analyse des dépendances terminée"
+                    echo "✅ Analyse SCA terminée"
                 }
             }
         }

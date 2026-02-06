@@ -1,0 +1,90 @@
+package com.devops.pfe.dto;
+
+import java.time.LocalDateTime;
+
+/**
+ * DTO pour les métadonnées de fichier (sans le contenu binaire).
+ * Utilisé pour les réponses API afin d'éviter de transférer le contenu inutilement.
+ */
+public class FileDTO {
+
+    private Long id;
+    private String fileName;
+    private String contentType;
+    private Long fileSize;
+    private LocalDateTime uploadedAt;
+    private String description;
+    private String downloadUrl;
+
+    // Constructeurs
+    public FileDTO() {
+    }
+
+    public FileDTO(Long id, String fileName, String contentType, Long fileSize, 
+                   LocalDateTime uploadedAt, String description) {
+        this.id = id;
+        this.fileName = fileName;
+        this.contentType = contentType;
+        this.fileSize = fileSize;
+        this.uploadedAt = uploadedAt;
+        this.description = description;
+        this.downloadUrl = "/api/v1/files/" + id + "/download";
+    }
+
+    // Getters et Setters
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getFileName() {
+        return fileName;
+    }
+
+    public void setFileName(String fileName) {
+        this.fileName = fileName;
+    }
+
+    public String getContentType() {
+        return contentType;
+    }
+
+    public void setContentType(String contentType) {
+        this.contentType = contentType;
+    }
+
+    public Long getFileSize() {
+        return fileSize;
+    }
+
+    public void setFileSize(Long fileSize) {
+        this.fileSize = fileSize;
+    }
+
+    public LocalDateTime getUploadedAt() {
+        return uploadedAt;
+    }
+
+    public void setUploadedAt(LocalDateTime uploadedAt) {
+        this.uploadedAt = uploadedAt;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public String getDownloadUrl() {
+        return downloadUrl;
+    }
+
+    public void setDownloadUrl(String downloadUrl) {
+        this.downloadUrl = downloadUrl;
+    }
+}

@@ -136,65 +136,123 @@ pipeline {
             steps {
                 echo "🚦 Vérification du Quality Gate SonarQube..."
                 script {
+                    // Attendre que l'analyse soit traitée par SonarQube
+                    sleep(time: 10, unit: 'SECONDS')
+                    
                     withCredentials([string(credentialsId: 'sonarqube-cred', variable: 'SONAR_TOKEN')]) {
                         // Récupérer le statut du Quality Gate
-                        def qualityGate = sh(
-                            script: """curl -s -u ${SONAR_TOKEN}: "${SONAR_HOST_URL}/api/qualitygates/project_status?projectKey=${SONAR_PROJECT_KEY}" """,
+                        def qualityGateJson = sh(
+                            script: 'curl -s -u $SONAR_TOKEN: "${SONAR_HOST_URL}/api/qualitygates/project_status?projectKey=${SONAR_PROJECT_KEY}"',
                             returnStdout: true
                         ).trim()
                         
                         // Récupérer les métriques détaillées
-                        def metrics = sh(
-                            script: """curl -s -u ${SONAR_TOKEN}: "${SONAR_HOST_URL}/api/measures/component?component=${SONAR_PROJECT_KEY}&metricKeys=bugs,vulnerabilities,code_smells,coverage,duplicated_lines_density,security_hotspots,security_rating,reliability_rating,sqale_rating" """,
+                        def metricsJson = sh(
+                            script: 'curl -s -u $SONAR_TOKEN: "${SONAR_HOST_URL}/api/measures/component?component=${SONAR_PROJECT_KEY}&metricKeys=bugs,vulnerabilities,code_smells,coverage,duplicated_lines_density,security_hotspots,ncloc,new_coverage,new_duplicated_lines_density"',
                             returnStdout: true
                         ).trim()
+                        
+                        // Parser le JSON du Quality Gate
+                        def qualityGate = readJSON text: qualityGateJson
+                        def metrics = readJSON text: metricsJson
+                        
+                        // Extraire le statut global
+                        def qgStatus = qualityGate.projectStatus?.status ?: 'UNKNOWN'
+                        def conditions = qualityGate.projectStatus?.conditions ?: []
+                        
+                        // Extraire les métriques dans une map
+                        def metricsMap = [:]
+                        metrics.component?.measures?.each { m ->
+                            metricsMap[m.metric] = m.value
+                        }
+                        
+                        // Valeurs actuelles
+                        def coverage = metricsMap['coverage'] ?: 'N/A'
+                        def newCoverage = metricsMap['new_coverage'] ?: 'N/A'
+                        def duplications = metricsMap['duplicated_lines_density'] ?: 'N/A'
+                        def newDuplications = metricsMap['new_duplicated_lines_density'] ?: 'N/A'
+                        def bugs = metricsMap['bugs'] ?: '0'
+                        def vulnerabilities = metricsMap['vulnerabilities'] ?: '0'
+                        def codeSmells = metricsMap['code_smells'] ?: '0'
+                        def securityHotspots = metricsMap['security_hotspots'] ?: '0'
                         
                         echo "=========================================="
                         echo "    📊 RAPPORT QUALITY GATE SONARQUBE"
                         echo "=========================================="
                         echo ""
-                        echo "Quality Gate Response: ${qualityGate}"
-                        echo ""
-                        echo "Métriques détaillées: ${metrics}"
+                        echo "🎯 STATUT GLOBAL: ${qgStatus == 'OK' ? '✅ PASSED' : qgStatus == 'ERROR' ? '❌ FAILED' : '⚠️ ' + qgStatus}"
                         echo ""
                         echo "=========================================="
-                        echo "    🎯 SEUILS QUALITY GATE (Règles)"
+                        echo "    📈 MÉTRIQUES ACTUELLES"
                         echo "=========================================="
-                        echo "✓ Coverage: >= 80% (Actuel: voir ci-dessus)"
-                        echo "✓ Duplications: <= 3%"
-                        echo "✓ Security Hotspots: 100% reviewed"
-                        echo "✓ New Bugs: 0"
-                        echo "✓ New Vulnerabilities: 0"
-                        echo "✓ New Code Smells: selon rating"
+                        echo "│ Métrique                   │ Valeur    │ Seuil     │ Statut │"
+                        echo "├────────────────────────────┼───────────┼───────────┼────────┤"
+                        
+                        // Vérifier chaque condition du Quality Gate
+                        def allPassed = true
+                        conditions.each { cond ->
+                            def metric = cond.metricKey
+                            def actual = cond.actualValue ?: 'N/A'
+                            def threshold = cond.errorThreshold ?: 'N/A'
+                            def status = cond.status
+                            def statusIcon = status == 'OK' ? '✅' : '❌'
+                            
+                            if (status != 'OK') {
+                                allPassed = false
+                            }
+                            
+                            // Nom lisible pour la métrique
+                            def metricName = metric
+                            switch(metric) {
+                                case 'new_coverage': metricName = 'Couverture (nouveau)'; break
+                                case 'new_duplicated_lines_density': metricName = 'Duplication (nouveau)'; break
+                                case 'new_violations': metricName = 'Violations (nouveau)'; break
+                                case 'new_security_hotspots_reviewed': metricName = 'Hotspots reviewés'; break
+                                case 'coverage': metricName = 'Couverture globale'; break
+                                case 'duplicated_lines_density': metricName = 'Duplication globale'; break
+                            }
+                            
+                            echo "│ ${metricName.padRight(26)} │ ${actual.toString().padRight(9)} │ ${threshold.toString().padRight(9)} │ ${statusIcon}     │"
+                        }
+                        
+                        echo "└────────────────────────────┴───────────┴───────────┴────────┘"
+                        echo ""
                         echo "=========================================="
+                        echo "    📊 MÉTRIQUES GLOBALES DU PROJET"
+                        echo "=========================================="
+                        echo "│ Couverture globale:     ${coverage}%"
+                        echo "│ Duplication globale:    ${duplications}%"
+                        echo "│ Bugs:                   ${bugs}"
+                        echo "│ Vulnérabilités:         ${vulnerabilities}"
+                        echo "│ Code Smells:            ${codeSmells}"
+                        echo "│ Security Hotspots:      ${securityHotspots}"
+                        echo "=========================================="
+                        echo ""
+                        echo "🔗 Dashboard: ${SONAR_HOST_URL}/dashboard?id=${SONAR_PROJECT_KEY}"
                         echo ""
                         
-                        // Vérifier le statut du projet (pas les conditions individuelles)
-                        if (qualityGate.contains('"projectStatus":{"status":"ERROR"')) {
-                            echo "❌ Quality Gate FAILED"
-                            echo "📋 Actions requises:"
-                            echo "   1. Révisez les Security Hotspots dans SonarQube (0% → 100%)"
-                            echo "   2. Réduisez la duplication de code (4.57% → < 3%)"
-                            echo "   3. Corrigez les 5 nouvelles violations"
+                        // Décision finale basée sur le statut réel
+                        if (qgStatus == 'ERROR') {
+                            echo "❌ QUALITY GATE FAILED"
                             echo ""
-                            echo "🔗 Voir détails: ${SONAR_HOST_URL}/dashboard?id=${SONAR_PROJECT_KEY}"
-                            
-                            // BLOQUER LE PIPELINE - Quality Gate est obligatoire
+                            echo "📋 Conditions non satisfaites:"
+                            conditions.findAll { it.status != 'OK' }.each { cond ->
+                                echo "   ❌ ${cond.metricKey}: ${cond.actualValue} (requis: ${cond.comparator == 'LT' ? '>=' : '<='} ${cond.errorThreshold})"
+                            }
+                            echo ""
                             error "Quality Gate FAILED - Le code ne respecte pas les standards de qualité"
-                        } else if (qualityGate.contains('"projectStatus":{"status":"OK"')) {
-                            echo "✅ Quality Gate PASSED - Toutes les conditions sont satisfaites!"
-                        } else if (qualityGate.contains('"status":"WARN"')) {
-                            echo "⚠️ Quality Gate WARNING - Améliorations recommandées"
+                        } else if (qgStatus == 'OK') {
+                            echo "✅ QUALITY GATE PASSED"
+                            echo "   Toutes les conditions sont satisfaites!"
                         } else {
-                            echo "ℹ️ Quality Gate status inconnu"
-                            echo "🔗 Voir: ${SONAR_HOST_URL}/dashboard?id=${SONAR_PROJECT_KEY}"
+                            echo "⚠️ Quality Gate status: ${qgStatus}"
                         }
                     }
                 }
             }
             post {
                 success {
-                    echo "✅ Quality Gate check completed"
+                    echo "✅ Quality Gate vérification terminée"
                 }
                 failure {
                     echo "❌ Quality Gate FAILED - Pipeline bloqué"

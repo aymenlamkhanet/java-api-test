@@ -1,0 +1,111 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36" version="29.3.6">
+<diagram name="CI/CD Pipeline" id="AQUwq1xH7bu_HwwHx6j7">
+<mxGraphModel dx="1426" dy="863" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+<root>
+<mxCell id="0"/>
+<mxCell id="1" parent="0"/>
+<mxCell id="cabf9XGYpe_kKvN9tzKT-190" parent="1" style="text;html=1;align=center;verticalAlign=middle;fontSize=26;fontStyle=1;fontColor=#1E293B;fontFamily=Segoe UI;" value="🚀 Jenkins CI/CD Pipeline — Spring Boot Backend" vertex="1">
+<mxGeometry height="50" width="560" x="240" y="90" as="geometry"/>
+</mxCell>
+<mxCell id="cabf9XGYpe_kKvN9tzKT-193" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ECFDF5;strokeColor=#10B981;strokeWidth=2;fontSize=11;align=center;shadow=1;arcSize=15;glass=0;gradientColor=#10B981;gradientDirection=south;" value="<b style='font-size:13px;color:#059669'>1. Checkout</b><br><span style='font-size:10px;color:#6B7280'>Git Clone + SHA Tag</span>" vertex="1">
+<mxGeometry height="65" width="140" x="60" y="200" as="geometry"/>
+</mxCell>
+<mxCell id="cabf9XGYpe_kKvN9tzKT-195" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ECFDF5;strokeColor=#10B981;strokeWidth=2;fontSize=11;align=center;shadow=1;arcSize=15;gradientColor=#10B981;" value="<b style='font-size:13px;color:#059669'>2. Compile</b><br><span style='font-size:10px;color:#6B7280'>mvn compile</span>" vertex="1">
+<mxGeometry height="65" width="140" x="220" y="200" as="geometry"/>
+</mxCell>
+<mxCell id="cabf9XGYpe_kKvN9tzKT-197" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFBEB;strokeColor=#F59E0B;strokeWidth=2;fontSize=11;align=center;shadow=1;arcSize=15;gradientColor=#F59E0B;" value="<b style='font-size:13px;color:#D97706'>3. Unit Tests</b><br><span style='font-size:10px;color:#6B7280'>JUnit5 (90) + JaCoCo</span>" vertex="1">
+<mxGeometry height="65" width="140" x="380" y="200" as="geometry"/>
+</mxCell>
+<mxCell id="cabf9XGYpe_kKvN9tzKT-199" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFBEB;strokeColor=#F59E0B;strokeWidth=2;fontSize=11;align=center;shadow=1;arcSize=15;gradientColor=#F59E0B;" value="<b style='font-size:13px;color:#D97706'>4. SonarQube</b><br><span style='font-size:10px;color:#6B7280'>SAST Analysis</span>" vertex="1">
+<mxGeometry height="65" width="140" x="540" y="200" as="geometry"/>
+</mxCell>
+<mxCell id="cabf9XGYpe_kKvN9tzKT-200" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFBEB;strokeColor=#F59E0B;strokeWidth=2;fontSize=11;align=center;shadow=1;arcSize=15;gradientColor=#F59E0B;" value="<b style='font-size:13px;color:#D97706'>5. Quality Gate</b><br><span style='font-size:10px;color:#6B7280'>Pass/Fail Check</span>" vertex="1">
+<mxGeometry height="65" width="140" x="700" y="200" as="geometry"/>
+</mxCell>
+<mxCell id="cabf9XGYpe_kKvN9tzKT-201" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FEF2F2;strokeColor=#EF4444;strokeWidth=2;fontSize=11;align=center;shadow=1;arcSize=15;gradientColor=#EF4444;" value="<b style='font-size:13px;color:#DC2626'>6. OWASP SCA</b><br><span style='font-size:10px;color:#6B7280'>Dependency Check</span>" vertex="1">
+<mxGeometry height="65" width="140" x="860" y="200" as="geometry"/>
+</mxCell>
+<mxCell id="cabf9XGYpe_kKvN9tzKT-204" edge="1" parent="1" source="cabf9XGYpe_kKvN9tzKT-193" style="endArrow=blockThin;html=1;strokeColor=#94A3B8;strokeWidth=2;endFill=1;rounded=1;" target="cabf9XGYpe_kKvN9tzKT-195">
+<mxGeometry relative="1" as="geometry"/>
+</mxCell>
+<mxCell id="cabf9XGYpe_kKvN9tzKT-205" edge="1" parent="1" source="cabf9XGYpe_kKvN9tzKT-195" style="endArrow=blockThin;html=1;strokeColor=#94A3B8;strokeWidth=2;endFill=1;rounded=1;" target="cabf9XGYpe_kKvN9tzKT-197">
+<mxGeometry relative="1" as="geometry"/>
+</mxCell>
+<mxCell id="cabf9XGYpe_kKvN9tzKT-206" edge="1" parent="1" source="cabf9XGYpe_kKvN9tzKT-197" style="endArrow=blockThin;html=1;strokeColor=#94A3B8;strokeWidth=2;endFill=1;rounded=1;" target="cabf9XGYpe_kKvN9tzKT-199">
+<mxGeometry relative="1" as="geometry"/>
+</mxCell>
+<mxCell id="cabf9XGYpe_kKvN9tzKT-207" edge="1" parent="1" source="cabf9XGYpe_kKvN9tzKT-199" style="endArrow=blockThin;html=1;strokeColor=#94A3B8;strokeWidth=2;endFill=1;rounded=1;" target="cabf9XGYpe_kKvN9tzKT-200">
+<mxGeometry relative="1" as="geometry"/>
+</mxCell>
+<mxCell id="cabf9XGYpe_kKvN9tzKT-207b" edge="1" parent="1" source="cabf9XGYpe_kKvN9tzKT-200" style="endArrow=blockThin;html=1;strokeColor=#94A3B8;strokeWidth=2;endFill=1;rounded=1;" target="cabf9XGYpe_kKvN9tzKT-201">
+<mxGeometry relative="1" as="geometry"/>
+</mxCell>
+<mxCell id="cabf9XGYpe_kKvN9tzKT-209" edge="1" parent="1" source="cabf9XGYpe_kKvN9tzKT-201" style="endArrow=blockThin;html=1;strokeColor=#94A3B8;strokeWidth=2;endFill=1;curved=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" target="cabf9XGYpe_kKvN9tzKT-203">
+<mxGeometry relative="1" as="geometry">
+<Array as="points">
+<mxPoint x="1040" y="232"/>
+<mxPoint x="1070" y="270"/>
+<mxPoint x="1080" y="320"/>
+<mxPoint x="1080" y="400"/>
+<mxPoint x="1040" y="432"/>
+</Array>
+</mxGeometry>
+</mxCell>
+<mxCell id="cabf9XGYpe_kKvN9tzKT-203" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ECFDF5;strokeColor=#10B981;strokeWidth=2;fontSize=11;align=center;shadow=1;arcSize=15;gradientColor=#10B981;" value="<b style='font-size:13px;color:#059669'>7. Package</b><br><span style='font-size:10px;color:#6B7280'>mvn package → JAR</span>" vertex="1">
+<mxGeometry height="65" width="140" x="860" y="400" as="geometry"/>
+</mxCell>
+<mxCell id="cabf9XGYpe_kKvN9tzKT-211" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EFF6FF;strokeColor=#3B82F6;strokeWidth=2;fontSize=11;align=center;shadow=1;arcSize=15;gradientColor=#3B82F6;" value="<b style='font-size:13px;color:#2563EB'>8. Jib Build</b><br><span style='font-size:10px;color:#6B7280'>Docker Image (local)</span>" vertex="1">
+<mxGeometry height="65" width="140" x="700" y="400" as="geometry"/>
+</mxCell>
+<mxCell id="cabf9XGYpe_kKvN9tzKT-213" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FEF2F2;strokeColor=#EF4444;strokeWidth=2;fontSize=11;align=center;shadow=1;arcSize=15;gradientColor=#EF4444;" value="<b style='font-size:13px;color:#DC2626'>9. Trivy Scan</b><br><span style='font-size:10px;color:#6B7280'>Image Vulnerabilities</span>" vertex="1">
+<mxGeometry height="65" width="140" x="540" y="400" as="geometry"/>
+</mxCell>
+<mxCell id="cabf9XGYpe_kKvN9tzKT-215" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFBEB;strokeColor=#F59E0B;strokeWidth=2;fontSize=11;align=center;shadow=1;arcSize=15;gradientColor=#F59E0B;" value="<b style='font-size:13px;color:#D97706'>10. Smoke Test</b><br><span style='font-size:10px;color:#6B7280'>Health Check</span>" vertex="1">
+<mxGeometry height="65" width="140" x="380" y="400" as="geometry"/>
+</mxCell>
+<mxCell id="cabf9XGYpe_kKvN9tzKT-217" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F5F3FF;strokeColor=#8B5CF6;strokeWidth=2;fontSize=11;align=center;shadow=1;arcSize=15;gradientColor=#8B5CF6;" value="<b style='font-size:13px;color:#7C3AED'>11. Robot API</b><br><span style='font-size:10px;color:#6B7280'>30 Tests E2E</span>" vertex="1">
+<mxGeometry height="65" width="140" x="220" y="400" as="geometry"/>
+</mxCell>
+<mxCell id="cabf9XGYpe_kKvN9tzKT-219" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F5F3FF;strokeColor=#8B5CF6;strokeWidth=2;fontSize=11;align=center;shadow=1;arcSize=15;gradientColor=#8B5CF6;" value="<b style='font-size:13px;color:#7C3AED'>12. Workflow E2E</b><br><span style='font-size:10px;color:#6B7280'>9 Scénarios 🎉</span>" vertex="1">
+<mxGeometry height="65" width="140" x="60" y="400" as="geometry"/>
+</mxCell>
+<mxCell id="cabf9XGYpe_kKvN9tzKT-222" edge="1" parent="1" source="cabf9XGYpe_kKvN9tzKT-203" style="endArrow=blockThin;html=1;strokeColor=#94A3B8;strokeWidth=2;endFill=1;rounded=1;" target="cabf9XGYpe_kKvN9tzKT-211">
+<mxGeometry relative="1" as="geometry"/>
+</mxCell>
+<mxCell id="cabf9XGYpe_kKvN9tzKT-223" edge="1" parent="1" source="cabf9XGYpe_kKvN9tzKT-211" style="endArrow=blockThin;html=1;strokeColor=#94A3B8;strokeWidth=2;endFill=1;rounded=1;" target="cabf9XGYpe_kKvN9tzKT-213">
+<mxGeometry relative="1" as="geometry"/>
+</mxCell>
+<mxCell id="cabf9XGYpe_kKvN9tzKT-224" edge="1" parent="1" source="cabf9XGYpe_kKvN9tzKT-213" style="endArrow=blockThin;html=1;strokeColor=#94A3B8;strokeWidth=2;endFill=1;rounded=1;" target="cabf9XGYpe_kKvN9tzKT-215">
+<mxGeometry relative="1" as="geometry"/>
+</mxCell>
+<mxCell id="cabf9XGYpe_kKvN9tzKT-225" edge="1" parent="1" source="cabf9XGYpe_kKvN9tzKT-215" style="endArrow=blockThin;html=1;strokeColor=#94A3B8;strokeWidth=2;endFill=1;rounded=1;" target="cabf9XGYpe_kKvN9tzKT-217">
+<mxGeometry relative="1" as="geometry"/>
+</mxCell>
+<mxCell id="cabf9XGYpe_kKvN9tzKT-226" edge="1" parent="1" source="cabf9XGYpe_kKvN9tzKT-217" style="endArrow=blockThin;html=1;strokeColor=#94A3B8;strokeWidth=2;endFill=1;rounded=1;" target="cabf9XGYpe_kKvN9tzKT-219">
+<mxGeometry relative="1" as="geometry"/>
+</mxCell>
+<mxCell id="cabf9XGYpe_kKvN9tzKT-242" parent="1" style="text;html=1;align=center;verticalAlign=middle;fontSize=12;fontColor=#059669;fontStyle=1;" value="✅ 129 Tests Total | 90 JUnit + 30 API + 9 Workflow" vertex="1">
+<mxGeometry height="30" width="350" x="340" y="500" as="geometry"/>
+</mxCell>
+<mxCell id="legend-title" parent="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontColor=#1E293B;fontStyle=1;" value="Légende:" vertex="1">
+<mxGeometry height="20" width="80" x="60" y="530" as="geometry"/>
+</mxCell>
+<mxCell id="legend-green" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ECFDF5;strokeColor=#10B981;strokeWidth=1;fontSize=9;align=center;" value="Build" vertex="1">
+<mxGeometry height="25" width="60" x="60" y="555" as="geometry"/>
+</mxCell>
+<mxCell id="legend-yellow" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFBEB;strokeColor=#F59E0B;strokeWidth=1;fontSize=9;align=center;" value="Test" vertex="1">
+<mxGeometry height="25" width="60" x="130" y="555" as="geometry"/>
+</mxCell>
+<mxCell id="legend-red" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FEF2F2;strokeColor=#EF4444;strokeWidth=1;fontSize=9;align=center;" value="Security" vertex="1">
+<mxGeometry height="25" width="60" x="200" y="555" as="geometry"/>
+</mxCell>
+<mxCell id="legend-blue" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EFF6FF;strokeColor=#3B82F6;strokeWidth=1;fontSize=9;align=center;" value="Docker" vertex="1">
+<mxGeometry height="25" width="60" x="270" y="555" as="geometry"/>
+</mxCell>
+<mxCell id="legend-purple" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F5F3FF;strokeColor=#8B5CF6;strokeWidth=1;fontSize=9;align=center;" value="Robot" vertex="1">
+<mxGeometry height="25" width="60" x="340" y="555" as="geometry"/>
+</mxCell>
+</root>
+</mxGraphModel>
+</diagram>
+</mxfile>

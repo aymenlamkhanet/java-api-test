@@ -365,17 +365,90 @@ pipeline {
             }
             post {
                 always {
-                    sh 'docker rm -f product-service-test || true'
-                    sh 'rm -rf robot-venv || true'
                     junit testResults: 'workflow-reports/workflow-xunit.xml', allowEmptyResults: true
-                    archiveArtifacts artifacts: 'robot-reports/**/*', fingerprint: true, allowEmptyArchive: true
-                    archiveArtifacts artifacts: 'workflow-reports/**/*', fingerprint: true, allowEmptyArchive: true
                 }
                 success {
                     echo "✅ Tests Workflow E2E: 9/9 PASSED"
                 }
                 failure {
                     echo "❌ Tests Workflow ECHEC - Consulter workflow-log.html pour voir exactement où ça a échoué"
+                }
+            }
+        }
+
+        // ============================================
+        // STAGE 13: Tests Upload/Download de Fichiers (Optionnel)
+        // ============================================
+        stage('13-robot-file-tests') {
+            when {
+                // Ce stage ne s'exécute que si l'endpoint de fichiers existe
+                expression { 
+                    return fileExists('robot-tests/file_tests.robot') 
+                }
+            }
+            steps {
+                echo "📁 Exécution des tests d'upload/download de fichiers..."
+                script {
+                    sh '''
+                        echo ""
+                        echo "📁 Tests de Fichiers - Upload & Download PDF"
+                        echo "============================================================"
+                        echo "Le fichier de test PDF est dans: robot-tests/test-files/sample-test.pdf"
+                        echo ""
+                        
+                        # Vérifier que le fichier de test existe dans le repo
+                        if [ -f "robot-tests/test-files/sample-test.pdf" ]; then
+                            echo "✅ Fichier PDF de test trouvé dans le code source"
+                            ls -la robot-tests/test-files/
+                        else
+                            echo "⚠️ Fichier PDF de test non trouvé - création..."
+                            mkdir -p robot-tests/test-files
+                            # Créer un PDF minimal de test
+                            echo "%PDF-1.4
+1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj
+2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj
+3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] >> endobj
+xref
+0 4
+trailer << /Size 4 /Root 1 0 R >>
+startxref
+189
+%%EOF" > robot-tests/test-files/sample-test.pdf
+                        fi
+                        
+                        mkdir -p file-reports
+                        
+                        # Exécuter les tests de fichiers (7 tests)
+                        ./robot-venv/bin/robot \
+                            --variable BASE_URL:http://product-service-test:8080 \
+                            --outputdir file-reports \
+                            --xunit file-xunit.xml \
+                            --log file-log.html \
+                            --report file-report.html \
+                            --loglevel DEBUG \
+                            --name "File_Upload_Download_Tests" \
+                            --skiponfailure skip \
+                            robot-tests/file_tests.robot || true
+                        
+                        echo ""
+                        echo "📁 Tests de fichiers terminés (voir file-report.html)"
+                    '''
+                }
+            }
+            post {
+                always {
+                    sh 'docker rm -f product-service-test || true'
+                    sh 'rm -rf robot-venv || true'
+                    junit testResults: 'file-reports/file-xunit.xml', allowEmptyResults: true
+                    archiveArtifacts artifacts: 'robot-reports/**/*', fingerprint: true, allowEmptyArchive: true
+                    archiveArtifacts artifacts: 'workflow-reports/**/*', fingerprint: true, allowEmptyArchive: true
+                    archiveArtifacts artifacts: 'file-reports/**/*', fingerprint: true, allowEmptyArchive: true
+                }
+                success {
+                    echo "✅ Tests de fichiers: OK"
+                }
+                failure {
+                    echo "⚠️ Tests de fichiers: Certains tests ont échoué (endpoint non implémenté?)"
                 }
             }
         }

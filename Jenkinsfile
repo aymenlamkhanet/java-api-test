@@ -321,6 +321,14 @@ pipeline {
             post {
                 always {
                     junit testResults: 'robot-reports/xunit.xml', allowEmptyResults: true
+                    publishHTML(target: [
+                        allowMissing: true,
+                        alwaysLinkToLastBuild: true,
+                        keepAll: true,
+                        reportDir: 'robot-reports',
+                        reportFiles: 'report.html,log.html',
+                        reportName: 'Robot API Tests Report'
+                    ])
                 }
                 success {
                     echo "✅ Tests API: 30/30 PASSED"
@@ -366,6 +374,14 @@ pipeline {
             post {
                 always {
                     junit testResults: 'workflow-reports/workflow-xunit.xml', allowEmptyResults: true
+                    publishHTML(target: [
+                        allowMissing: true,
+                        alwaysLinkToLastBuild: true,
+                        keepAll: true,
+                        reportDir: 'workflow-reports',
+                        reportFiles: 'workflow-report.html,workflow-log.html',
+                        reportName: 'Robot Workflow E2E Report'
+                    ])
                 }
                 success {
                     echo "✅ Tests Workflow E2E: 9/9 PASSED"
@@ -440,6 +456,14 @@ startxref
                     sh 'docker rm -f product-service-test || true'
                     sh 'rm -rf robot-venv || true'
                     junit testResults: 'file-reports/file-xunit.xml', allowEmptyResults: true
+                    publishHTML(target: [
+                        allowMissing: true,
+                        alwaysLinkToLastBuild: true,
+                        keepAll: true,
+                        reportDir: 'file-reports',
+                        reportFiles: 'file-report.html,file-log.html',
+                        reportName: 'Robot File Tests Report'
+                    ])
                     archiveArtifacts artifacts: 'robot-reports/**/*', fingerprint: true, allowEmptyArchive: true
                     archiveArtifacts artifacts: 'workflow-reports/**/*', fingerprint: true, allowEmptyArchive: true
                     archiveArtifacts artifacts: 'file-reports/**/*', fingerprint: true, allowEmptyArchive: true

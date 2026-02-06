@@ -11,6 +11,10 @@
 8. [Collecte des logs et auditabilité](#8-collecte-des-logs-et-auditabilité-jenkins--elk)
 9. [Configuration du Jenkinsfile](#9-configuration-du-jenkinsfile)
 10. [Conclusion](#10-conclusion)
+11. [Documentation Robot Framework & APIs](#11-documentation-robot-framework--apis)
+12. [Liste Complète des APIs Java](#12-liste-complète-des-apis-java)
+13. [Tests API Robot Framework (30 tests)](#13-tests-api-robot-framework-30-tests)
+14. [Tests Workflow E2E (9 scénarios)](#14-tests-workflow-e2e-9-scénarios---détail-complet)
 
 ---
 
@@ -392,7 +396,7 @@ environment {
 ```
 
 ### 🔧 Prérequis Jenkins
-
+ihav all the credetials
 | Plugin | Utilité |
 |--------|--------|
 | **Pipeline** | Exécution du Jenkinsfile |
@@ -555,6 +559,563 @@ start target/site/jacoco/index.html
 # Lister rapports Surefire
 ls target/surefire-reports/*.xml
 ```
+
+---
+
+## 11. Documentation Robot Framework & APIs
+
+### 🤖 Qu'est-ce que Robot Framework ?
+
+Robot Framework est un **framework de test automatisé** open-source basé sur des mots-clés (keyword-driven). Il utilise une syntaxe lisible par les humains pour écrire des tests.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    ROBOT FRAMEWORK                          │
+├─────────────────────────────────────────────────────────────┤
+│  📝 Fichiers .robot  →  🔧 Libraries  →  🎯 Exécution      │
+│                                                             │
+│  Test Cases          RequestsLibrary    Appels HTTP        │
+│  Keywords            Collections        Assertions         │
+│  Variables           String             Rapports HTML      │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Structure d'un fichier .robot
+
+```robot
+*** Settings ***
+Documentation     Description du test
+Library           RequestsLibrary    # Pour les appels HTTP
+Library           Collections        # Pour manipuler listes/dictionnaires
+
+*** Variables ***
+${BASE_URL}       http://localhost:8080
+${API_PATH}       /api/v1
+
+*** Keywords ***
+Create Product
+    [Arguments]    ${name}    ${price}
+    ${product}=    Create Dictionary    name=${name}    price=${price}
+    ${response}=   POST On Session    api    ${API_PATH}/products    json=${product}
+    RETURN    ${response}
+
+*** Test Cases ***
+Test Create Product
+    [Documentation]    Test de création d'un produit
+    [Tags]    crud    product
+    ${response}=    Create Product    Mon Produit    99.99
+    Should Be Equal As Strings    ${response.status_code}    201
+```
+
+### Exécution des tests
+
+```bash
+# Installer Robot Framework
+pip install robotframework robotframework-requests
+
+# Exécuter les tests
+robot --variable BASE_URL:http://localhost:8080 robot-tests/api_tests.robot
+
+# Résultat généré:
+# → output.xml (données brutes)
+# → log.html (log détaillé)
+# → report.html (rapport résumé)
+```
+
+---
+
+## 12. Liste Complète des APIs Java
+
+### 📦 Product API (`/api/v1/products`)
+
+| Méthode | Endpoint | Description | Request Body | Response |
+|---------|----------|-------------|--------------|----------|
+| `POST` | `/products` | Créer un produit | `{name, description, price, stockQuantity, category, sku, active}` | `201` + Product JSON |
+| `GET` | `/products` | Liste tous les produits | - | `200` + Array[Product] |
+| `GET` | `/products/{id}` | Récupérer un produit par ID | - | `200` + Product JSON |
+| `GET` | `/products/sku/{sku}` | Récupérer par SKU | - | `200` + Product JSON |
+| `GET` | `/products/active` | Produits actifs seulement | - | `200` + Array[Product] |
+| `PUT` | `/products/{id}` | Mettre à jour un produit | Product JSON | `200` + Product JSON |
+| `DELETE` | `/products/{id}` | Supprimer un produit | - | `204` No Content |
+| `GET` | `/products/category/{category}` | Filtrer par catégorie | - | `200` + Array[Product] |
+| `GET` | `/products/search?keyword=X` | Recherche par mot-clé | - | `200` + Array[Product] |
+| `GET` | `/products/price-range?minPrice=X&maxPrice=Y` | Filtrer par prix | - | `200` + Array[Product] |
+| `GET` | `/products/low-stock?threshold=X` | Produits stock faible | - | `200` + Array[Product] |
+| `GET` | `/products/categories` | Liste des catégories | - | `200` + Array[String] |
+| `PATCH` | `/products/{id}/stock?quantity=X` | Modifier stock | - | `200` + Product JSON |
+| `POST` | `/products/{id}/stock/add?quantity=X` | Ajouter au stock | - | `200` + Product JSON |
+| `POST` | `/products/{id}/stock/remove?quantity=X` | Retirer du stock | - | `200` + Product JSON |
+| `GET` | `/products/{id}/stock/check?quantity=X` | Vérifier disponibilité | - | `200` + Boolean |
+| `POST` | `/products/{id}/activate` | Activer un produit | - | `200` + Product JSON |
+| `POST` | `/products/{id}/deactivate` | Désactiver un produit | - | `200` + Product JSON |
+| `GET` | `/products/{id}/discounted-price?discount=X` | Prix avec remise | - | `200` + BigDecimal |
+| `GET` | `/products/total-value` | Valeur totale stock | - | `200` + BigDecimal |
+
+### 📋 Order API (`/api/v1/orders`)
+
+| Méthode | Endpoint | Description | Request Body | Response |
+|---------|----------|-------------|--------------|----------|
+| `POST` | `/orders` | Créer une commande | `{customerName, customerEmail, shippingAddress, items[{productId, quantity}]}` | `201` + Order JSON |
+| `GET` | `/orders` | Liste toutes les commandes | - | `200` + Array[Order] |
+| `GET` | `/orders/{id}` | Récupérer commande par ID | - | `200` + Order JSON |
+| `GET` | `/orders/number/{orderNumber}` | Récupérer par numéro | - | `200` + Order JSON |
+| `GET` | `/orders/customer?email=X` | Commandes par email client | - | `200` + Array[Order] |
+| `POST` | `/orders/{id}/cancel` | Annuler une commande | - | `204` No Content |
+| `PATCH` | `/orders/{id}/status?status=X` | Changer le statut | - | `200` + Order JSON |
+| `GET` | `/orders/status/{status}` | Filtrer par statut | - | `200` + Array[Order] |
+| `GET` | `/orders/date-range?start=X&end=Y` | Filtrer par date | - | `200` + Array[Order] |
+| `GET` | `/orders/{id}/total` | Calculer le total | - | `200` + BigDecimal |
+| `GET` | `/orders/count/{status}` | Compter par statut | - | `200` + Long |
+
+### ❤️ Health API
+
+| Méthode | Endpoint | Description | Response |
+|---------|----------|-------------|----------|
+| `GET` | `/actuator/health` | Santé de l'application | `{"status": "UP"}` |
+| `GET` | `/actuator/health/readiness` | Prêt pour le trafic | `{"status": "UP"}` |
+| `GET` | `/actuator/health/liveness` | Application vivante | `{"status": "UP"}` |
+| `GET` | `/actuator/info` | Infos application | `{}` |
+| `GET` | `/api/v1/health` | Health custom | `{"status": "UP", ...}` |
+
+### 📊 Statuts de commande (OrderStatus)
+
+```
+PENDING → CONFIRMED → PROCESSING → SHIPPED → DELIVERED
+                 ↘ CANCELLED
+```
+
+---
+
+## 13. Tests API Robot Framework (30 tests)
+
+### 📋 Liste complète des tests API
+
+| # | Test | Description | Ce qui est testé |
+|---|------|-------------|------------------|
+| **HEALTH CHECK (4)** |
+| 01 | Health Check | Vérifie `/actuator/health` retourne `UP` | Application démarrée |
+| 02 | Readiness Probe | Vérifie `/actuator/health/readiness` | Prêt pour Kubernetes |
+| 03 | Liveness Probe | Vérifie `/actuator/health/liveness` | Application vivante |
+| 04 | Custom Health | Vérifie `/api/v1/health` | Endpoint custom |
+| **PRODUCT CRUD (10)** |
+| 05 | Create Product | `POST /products` → 201 | Création produit |
+| 06 | Create & Get by ID | `POST` puis `GET /products/{id}` | Récupération par ID |
+| 07 | Get All Products | `GET /products` → liste | Liste tous les produits |
+| 08 | Create & Update | `POST` puis `PUT /products/{id}` | Mise à jour produit |
+| 09 | Get by Category | `GET /products/category/Testing` | Filtre par catégorie |
+| 10 | Search by Keyword | `GET /products/search?keyword=X` | Recherche textuelle |
+| 11 | Price Range | `GET /products/price-range?min=10&max=500` | Filtre par prix |
+| 12 | Low Stock | `GET /products/low-stock?threshold=10` | Produits stock faible |
+| 13 | Create & Delete | `POST` puis `DELETE /products/{id}` | Suppression produit |
+| 14 | Get Categories | `GET /products/categories` | Liste catégories |
+| **ORDER CRUD (10)** |
+| 15 | Get All Orders | `GET /orders` | Liste commandes |
+| 16 | Create Order | `POST /orders` avec items | Création commande |
+| 17 | Create & Get by ID | `POST` puis `GET /orders/{id}` | Récupération commande |
+| 18 | Get by Status | `GET /orders/status/PENDING` | Filtre par statut |
+| 19 | Create Multiple | 2x `POST /orders` | Plusieurs commandes |
+| 20 | Order Items | Vérifie que `items` existe dans order | Structure données |
+| 21 | Order Total | `GET /orders/{id}/total` | Calcul du total |
+| 22 | Count by Status | `GET /orders/count/PENDING` | Comptage par statut |
+| 23 | Cancel Order | `POST /orders/{id}/cancel` | Annulation commande |
+| 24 | Update Status | `PATCH /orders/{id}/status?status=CONFIRMED` | Changement statut |
+| **ERROR HANDLING (4)** |
+| 25 | Product 404 | `GET /products/99999` → 404 | Produit inexistant |
+| 26 | Invalid Product | `POST /products` avec données invalides → 400 | Validation |
+| 27 | Order 404 | `GET /orders/99999` → 404 | Commande inexistante |
+| 28 | Actuator Info | `GET /actuator/info` → 200 | Infos application |
+| **FINAL (2)** |
+| 29 | Products Functional | Create + Get All | API produits OK |
+| 30 | Orders Functional | Create product + order + Get All | API commandes OK |
+
+---
+
+## 14. Tests Workflow E2E (9 scénarios) - Détail complet
+
+Ces tests **chaînent plusieurs appels API** pour tester des scénarios métier complets. Robot Framework appelle la première API, **attend la réponse**, puis utilise cette réponse pour appeler la prochaine API.
+
+### 🔄 Comment Robot Framework chaîne les appels API
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    COMMENT ROBOT FRAMEWORK CHAÎNE LES APPELS                │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+  ┌─────────────┐         ┌─────────────┐         ┌─────────────┐
+  │   CALL      │         │   WAIT      │         │   EXTRACT   │
+  │   API       │────────▶│   RESPONSE  │────────▶│   DATA      │
+  │             │         │             │         │             │
+  │ POST        │         │ HTTP 201    │         │ id = 5      │
+  │ /products   │         │ {"id": 5}   │         │             │
+  └─────────────┘         └─────────────┘         └──────┬──────┘
+                                                         │
+                          ┌──────────────────────────────┘
+                          │ UTILISE id = 5
+                          ▼
+  ┌─────────────┐         ┌─────────────┐         ┌─────────────┐
+  │   CALL      │         │   WAIT      │         │   EXTRACT   │
+  │   API       │────────▶│   RESPONSE  │────────▶│   DATA      │
+  │             │         │             │         │             │
+  │ POST        │         │ HTTP 201    │         │ order_id=10 │
+  │ /orders     │         │ {"id": 10}  │         │             │
+  │ productId:5 │         │             │         │             │
+  └─────────────┘         └─────────────┘         └──────┬──────┘
+                                                         │
+                          ┌──────────────────────────────┘
+                          │ UTILISE order_id = 10
+                          ▼
+  ┌─────────────┐         ┌─────────────┐         ┌─────────────┐
+  │   CALL      │         │   WAIT      │         │   VERIFY    │
+  │   API       │────────▶│   RESPONSE  │────────▶│   STATUS    │
+  │             │         │             │         │             │
+  │ PATCH       │         │ HTTP 200    │         │ CONFIRMED ✓ │
+  │ /orders/10/ │         │ {status:    │         │             │
+  │ status=     │         │ "CONFIRMED"}│         │             │
+  │ CONFIRMED   │         │             │         │             │
+  └─────────────┘         └─────────────┘         └─────────────┘
+```
+
+---
+
+### Test 01: Complete Order Workflow (Cycle de vie complet)
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                    TEST 01 - COMPLETE ORDER WORKFLOW                         │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+STEP 1: CRÉER UN PRODUIT
+────────────────────────
+Robot appelle:  POST /api/v1/products
+Body envoyé:    {
+                  "name": "Workflow Product complete-order",
+                  "description": "Product for workflow testing",
+                  "price": 50.00,
+                  "stockQuantity": 50,
+                  "category": "Workflow",
+                  "sku": "WF-12345678-complete-order",
+                  "active": true
+                }
+                
+Réponse reçue:  Status: 201 Created
+                Body: {
+                  "id": 5,              ← ROBOT EXTRAIT CET ID
+                  "name": "Workflow Product complete-order",
+                  "price": 50.00,
+                  "stockQuantity": 50,
+                  "active": true,
+                  ...
+                }
+
+Robot stocke:   ${product_id} = 5
+
+                              ↓ UTILISE product_id = 5
+
+STEP 2: CRÉER UNE COMMANDE
+──────────────────────────
+Robot appelle:  POST /api/v1/orders
+Body envoyé:    {
+                  "customerName": "Workflow Customer complete",
+                  "customerEmail": "wf-complete-12345678@test.com",
+                  "shippingAddress": "123 Workflow Street",
+                  "items": [
+                    {
+                      "productId": 5,    ← UTILISE L'ID DU PRODUIT CRÉÉ
+                      "quantity": 5
+                    }
+                  ]
+                }
+
+Réponse reçue:  Status: 201 Created
+                Body: {
+                  "id": 10,             ← ROBOT EXTRAIT CET ID
+                  "orderNumber": "ORD-ABC123",
+                  "customerName": "Workflow Customer complete",
+                  "status": "PENDING",  ← STATUT INITIAL
+                  "items": [...],
+                  ...
+                }
+
+Robot stocke:   ${order_id} = 10
+
+                              ↓ UTILISE order_id = 10
+
+STEP 3: CONFIRMER LA COMMANDE
+─────────────────────────────
+Robot appelle:  PATCH /api/v1/orders/10/status?status=CONFIRMED
+
+Réponse reçue:  Status: 200 OK
+                Body: {
+                  "id": 10,
+                  "status": "CONFIRMED",  ← NOUVEAU STATUT
+                  ...
+                }
+
+Robot vérifie:  status == "CONFIRMED" ✓
+
+                              ↓ CONTINUE AVEC order_id = 10
+
+STEP 4: TRAITER ET EXPÉDIER
+───────────────────────────
+Robot appelle:  PATCH /api/v1/orders/10/status?status=PROCESSING
+Réponse reçue:  Status: 200 OK, { "status": "PROCESSING" }
+
+Robot appelle:  PATCH /api/v1/orders/10/status?status=SHIPPED
+Réponse reçue:  Status: 200 OK, { "status": "SHIPPED" }
+
+                              ↓
+
+STEP 5: LIVRER LA COMMANDE
+──────────────────────────
+Robot appelle:  PATCH /api/v1/orders/10/status?status=DELIVERED
+Réponse reçue:  Status: 200 OK, { "status": "DELIVERED" }
+
+Robot vérifie:  status == "DELIVERED" ✓
+
+✅ WORKFLOW COMPLETE!
+```
+
+---
+
+### Test 02: Order Cancellation Workflow
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                    TEST 02 - ORDER CANCELLATION WORKFLOW                     │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+STEP 1: POST /products
+        ↓
+        Response: { "id": 6, "stockQuantity": 30, ... }
+        ↓
+        Robot extrait: product_id = 6
+
+STEP 2: POST /orders (avec productId: 6, quantity: 10)
+        ↓
+        Response: { "id": 11, "status": "PENDING", ... }
+        ↓
+        Robot extrait: order_id = 11
+
+STEP 3: POST /orders/11/cancel
+        ↓
+        Response: Status 204 No Content
+
+STEP 4: GET /orders/11
+        ↓
+        Response: { "id": 11, "status": "CANCELLED", ... }
+        ↓
+        Robot vérifie: status == "CANCELLED" ✓
+
+✅ WORKFLOW COMPLETE!
+```
+
+---
+
+### Test 03: Insufficient Stock Order
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                    TEST 03 - INSUFFICIENT STOCK ORDER                        │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+STEP 1: POST /products (stockQuantity: 5)
+        ↓
+        Response: { "id": 7, "stockQuantity": 5, ... }
+        ↓
+        Robot extrait: product_id = 7
+
+STEP 2: POST /orders (avec productId: 7, quantity: 20)  ← PLUS QUE LE STOCK!
+        ↓
+        Response: Status 409 Conflict (ou 400 Bad Request)
+                  { "error": "Insufficient stock" }
+
+STEP 3: Robot vérifie le status code:
+        - 400 → "Order rejected (Bad Request)" ✓
+        - 409 → "Order rejected (Conflict)" ✓
+        - 201 → "Order accepted (validation différée)" ✓
+
+✅ WORKFLOW COMPLETE!
+```
+
+---
+
+### Test 04: Order Status Transition Validation
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                    TEST 04 - STATUS TRANSITION VALIDATION                    │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+STEP 1: POST /products → { "id": 8 }
+
+STEP 2: POST /orders (productId: 8)
+        ↓
+        Response: { "id": 12, "status": "PENDING", ... }
+
+STEP 3: PATCH /orders/12/status?status=SHIPPED  ← TRANSITION INVALIDE!
+                                                  (devrait être CONFIRMED d'abord)
+        ↓
+        Response: 
+          - 400 Bad Request = L'API valide les transitions ✓
+          - 200 OK = L'API est flexible ✓
+
+STEP 4: Robot vérifie et documente le comportement
+
+✅ WORKFLOW COMPLETE!
+```
+
+---
+
+### Test 05: Multiple Products Order
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                    TEST 05 - MULTIPLE PRODUCTS ORDER                         │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+STEP 1: POST /products (price: 50.00) → { "id": 9 }
+STEP 2: POST /products (price: 75.00) → { "id": 10 }
+STEP 3: POST /products (price: 25.00) → { "id": 11 }
+
+STEP 4: POST /orders
+        Body: {
+          "items": [
+            { "productId": 9, "quantity": 2 },   ← 2 x 50€ = 100€
+            { "productId": 10, "quantity": 1 },  ← 1 x 75€ = 75€
+            { "productId": 11, "quantity": 3 }   ← 3 x 25€ = 75€
+          ]                                       ─────────────────
+        }                                         TOTAL = 250€
+        ↓
+        Response: { "id": 13, ... }
+
+STEP 5: GET /orders/13/total
+        ↓
+        Response: 250.00 ✓
+
+✅ WORKFLOW COMPLETE!
+```
+
+---
+
+### Test 06: Orders By Customer Email
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                    TEST 06 - ORDERS BY CUSTOMER EMAIL                        │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+STEP 1: POST /products → product_id = 12
+        POST /orders (email: "unique-12345@search.com") → Première commande
+
+STEP 2: POST /orders (email: "unique-12345@search.com") → Deuxième commande
+
+STEP 3: GET /orders/customer?email=unique-12345@search.com
+        ↓
+        Response: [
+          { "id": 14, "customerEmail": "unique-12345@search.com" },
+          { "id": 15, "customerEmail": "unique-12345@search.com" }
+        ]
+        ↓
+        Robot vérifie: length >= 2 ✓
+
+✅ WORKFLOW COMPLETE!
+```
+
+---
+
+### Test 07: Orders By Status
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                    TEST 07 - ORDERS BY STATUS                                │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+STEP 1: POST /products → product_id
+        POST /orders → order_id, status = "PENDING"
+
+STEP 2: PATCH /orders/{order_id}/status?status=CONFIRMED
+        ↓
+        { "status": "CONFIRMED" }
+
+STEP 3: GET /orders/status/CONFIRMED
+        ↓
+        Response: [ { "id": X, "status": "CONFIRMED" }, ... ]
+        ↓
+        Robot vérifie: au moins 1 commande CONFIRMED ✓
+
+✅ WORKFLOW COMPLETE!
+```
+
+---
+
+### Test 08: Product Activation/Deactivation
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                    TEST 08 - PRODUCT ACTIVATION/DEACTIVATION                 │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+STEP 1: POST /products (active: true)
+        ↓
+        { "id": 13, "active": true } → product_id = 13
+
+STEP 2: POST /products/13/deactivate
+        ↓
+        { "id": 13, "active": false }  ← MAINTENANT INACTIF
+
+STEP 3: GET /products/13
+        ↓
+        { "id": 13, "active": false }
+        ↓
+        Robot vérifie: active == false ✓
+
+STEP 4: POST /products/13/activate
+        ↓
+        { "id": 13, "active": true }  ← RÉACTIVÉ
+        ↓
+        Robot vérifie: active == true ✓
+
+✅ WORKFLOW COMPLETE!
+```
+
+---
+
+### Test 09: Order Inactive Product
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                    TEST 09 - ORDER INACTIVE PRODUCT                          │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+STEP 1: POST /products (active: true)
+        ↓
+        { "id": 14, "active": true } → product_id = 14
+
+STEP 2: POST /products/14/deactivate
+        ↓
+        { "id": 14, "active": false }  ← PRODUIT INACTIF
+
+STEP 3: POST /orders (productId: 14)  ← TENTE DE COMMANDER UN PRODUIT INACTIF
+        ↓
+        Response:
+          - 400 Bad Request = "Cannot order inactive product" ✓
+          - 201 Created = API permet les commandes de produits inactifs ✓
+
+STEP 4: Robot vérifie et documente le comportement
+
+✅ WORKFLOW COMPLETE!
+```
+
+---
+
+### 📊 Résumé de la couverture de tests
+
+| Type de Test | Nombre | Framework | But |
+|--------------|--------|-----------|-----|
+| **Tests Unitaires** | 90 | JUnit 5 | Tester les classes Java individuellement |
+| **Tests API** | 30 | Robot Framework | Tester chaque endpoint de l'API |
+| **Tests Workflow E2E** | 9 | Robot Framework | Tester les scénarios métier complets |
+| **TOTAL** | **129** | | |
 
 ---
 

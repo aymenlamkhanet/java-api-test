@@ -321,14 +321,7 @@ pipeline {
             post {
                 always {
                     junit testResults: 'robot-reports/xunit.xml', allowEmptyResults: true
-                    publishHTML(target: [
-                        allowMissing: true,
-                        alwaysLinkToLastBuild: true,
-                        keepAll: true,
-                        reportDir: 'robot-reports',
-                        reportFiles: 'report.html,log.html',
-                        reportName: 'Robot API Tests Report'
-                    ])
+                    publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, icon: '', keepAll: false, reportDir: 'robot-reports', reportFiles: 'report.html, log.html', reportName: 'Robot API Tests', reportTitles: '', useWrapperFileDirectly: true])
                 }
                 success {
                     echo "✅ Tests API: 30/30 PASSED"
@@ -374,14 +367,7 @@ pipeline {
             post {
                 always {
                     junit testResults: 'workflow-reports/workflow-xunit.xml', allowEmptyResults: true
-                    publishHTML(target: [
-                        allowMissing: true,
-                        alwaysLinkToLastBuild: true,
-                        keepAll: true,
-                        reportDir: 'workflow-reports',
-                        reportFiles: 'workflow-report.html,workflow-log.html',
-                        reportName: 'Robot Workflow E2E Report'
-                    ])
+                    publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, icon: '', keepAll: false, reportDir: 'workflow-reports', reportFiles: 'workflow-report.html, workflow-log.html', reportName: 'Robot Workflow E2E', reportTitles: '', useWrapperFileDirectly: true])
                 }
                 success {
                     echo "✅ Tests Workflow E2E: 9/9 PASSED"
@@ -456,14 +442,7 @@ startxref
                     sh 'docker rm -f product-service-test || true'
                     sh 'rm -rf robot-venv || true'
                     junit testResults: 'file-reports/file-xunit.xml', allowEmptyResults: true
-                    publishHTML(target: [
-                        allowMissing: true,
-                        alwaysLinkToLastBuild: true,
-                        keepAll: true,
-                        reportDir: 'file-reports',
-                        reportFiles: 'file-report.html,file-log.html',
-                        reportName: 'Robot File Tests Report'
-                    ])
+                    publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, icon: '', keepAll: false, reportDir: 'file-reports', reportFiles: 'file-report.html, file-log.html', reportName: 'Robot File Tests', reportTitles: '', useWrapperFileDirectly: true])
                     archiveArtifacts artifacts: 'robot-reports/**/*', fingerprint: true, allowEmptyArchive: true
                     archiveArtifacts artifacts: 'workflow-reports/**/*', fingerprint: true, allowEmptyArchive: true
                     archiveArtifacts artifacts: 'file-reports/**/*', fingerprint: true, allowEmptyArchive: true

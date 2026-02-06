@@ -1,6 +1,11 @@
 package com.devops.pfe.entity;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
 import java.time.LocalDateTime;
 
 /**
@@ -9,6 +14,10 @@ import java.time.LocalDateTime;
  */
 @Entity
 @Table(name = "files")
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class FileEntity {
 
     @Id
@@ -37,73 +46,5 @@ public class FileEntity {
     @PrePersist
     protected void onCreate() {
         this.uploadedAt = LocalDateTime.now();
-    }
-
-    // Constructeurs
-    public FileEntity() {
-    }
-
-    public FileEntity(String fileName, String contentType, Long fileSize, byte[] content) {
-        this.fileName = fileName;
-        this.contentType = contentType;
-        this.fileSize = fileSize;
-        this.content = content;
-    }
-
-    // Getters et Setters
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public String getFileName() {
-        return fileName;
-    }
-
-    public void setFileName(String fileName) {
-        this.fileName = fileName;
-    }
-
-    public String getContentType() {
-        return contentType;
-    }
-
-    public void setContentType(String contentType) {
-        this.contentType = contentType;
-    }
-
-    public Long getFileSize() {
-        return fileSize;
-    }
-
-    public void setFileSize(Long fileSize) {
-        this.fileSize = fileSize;
-    }
-
-    public byte[] getContent() {
-        return content;
-    }
-
-    public void setContent(byte[] content) {
-        this.content = content;
-    }
-
-    public LocalDateTime getUploadedAt() {
-        return uploadedAt;
-    }
-
-    public void setUploadedAt(LocalDateTime uploadedAt) {
-        this.uploadedAt = uploadedAt;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
     }
 }

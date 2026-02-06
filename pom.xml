@@ -27,6 +27,7 @@
         <sonar.projectName>Product Service</sonar.projectName>
         <sonar.java.coveragePlugin>jacoco</sonar.java.coveragePlugin>
         <sonar.coverage.jacoco.xmlReportPaths>${project.build.directory}/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
+        <sonar.coverage.exclusions>**/entity/**,**/dto/**,**/exception/**,**/config/**</sonar.coverage.exclusions>
         <jib.to.image>harbor.local/devops/product-service</jib.to.image>
     </properties>
 

@@ -369,5 +369,50 @@ class FileServiceTest {
             // Then
             assertThat(stats.totalSizeFormatted()).isEqualTo("2.00 KB");
         }
+
+        @Test
+        @DisplayName("Should format GB correctly")
+        void shouldFormatGBCorrectly() {
+            // Given
+            when(fileRepository.countAllFiles()).thenReturn(1L);
+            when(fileRepository.getTotalStorageUsed()).thenReturn(2L * 1024L * 1024L * 1024L); // 2 GB
+
+            // When
+            FileService.StorageStats stats = fileService.getStorageStats();
+
+            // Then
+            assertThat(stats.totalSizeFormatted()).isEqualTo("2.00 GB");
+        }
+    }
+
+    @Nested
+    @DisplayName("Upload Edge Cases Tests")
+    class UploadEdgeCasesTests {
+
+        @Test
+        @DisplayName("Should handle null content type")
+        void shouldHandleNullContentType() {
+            // Given
+            MockMultipartFile fileWithNullContentType = new MockMultipartFile(
+                    "file",
+                    "document.bin",
+                    null,
+                    "binary content".getBytes()
+            );
+
+            when(fileRepository.save(any(FileEntity.class))).thenAnswer(invocation -> {
+                FileEntity saved = invocation.getArgument(0);
+                saved.setId(1L);
+                saved.setUploadedAt(LocalDateTime.now());
+                return saved;
+            });
+
+            // When
+            FileDTO result = fileService.uploadFile(fileWithNullContentType, null);
+
+            // Then
+            assertThat(result).isNotNull();
+            assertThat(result.getContentType()).isEqualTo("application/octet-stream");
+        }
     }
 }

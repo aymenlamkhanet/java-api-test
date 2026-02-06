@@ -178,7 +178,9 @@ pipeline {
                             echo "   3. Corrigez les 5 nouvelles violations"
                             echo ""
                             echo "🔗 Voir détails: ${SONAR_HOST_URL}/dashboard?id=${SONAR_PROJECT_KEY}"
-                            // Le pipeline continue mais avec avertissement
+                            
+                            // BLOQUER LE PIPELINE - Quality Gate est obligatoire
+                            error "Quality Gate FAILED - Le code ne respecte pas les standards de qualité"
                         } else if (qualityGate.contains('"projectStatus":{"status":"OK"')) {
                             echo "✅ Quality Gate PASSED - Toutes les conditions sont satisfaites!"
                         } else if (qualityGate.contains('"status":"WARN"')) {
@@ -193,6 +195,9 @@ pipeline {
             post {
                 success {
                     echo "✅ Quality Gate check completed"
+                }
+                failure {
+                    echo "❌ Quality Gate FAILED - Pipeline bloqué"
                 }
             }
         }

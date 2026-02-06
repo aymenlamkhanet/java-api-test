@@ -1,0 +1,30 @@
+{
+  "version": "8.11.0",
+  "objects": [
+    {
+      "id": "jenkins-pipeline-dashboard",
+      "type": "dashboard",
+      "attributes": {
+        "title": "Jenkins CI/CD Pipeline Dashboard",
+        "description": "Monitoring des pipelines Jenkins - Product Service",
+        "panelsJSON": "[{\"gridData\":{\"x\":0,\"y\":0,\"w\":24,\"h\":8},\"type\":\"visualization\",\"panelIndex\":\"1\",\"embeddableConfig\":{\"title\":\"Pipeline Status Overview\"}},{\"gridData\":{\"x\":24,\"y\":0,\"w\":24,\"h\":8},\"type\":\"visualization\",\"panelIndex\":\"2\",\"embeddableConfig\":{\"title\":\"Build Duration Trend\"}}]",
+        "timeRestore": true,
+        "timeTo": "now",
+        "timeFrom": "now-24h",
+        "refreshInterval": {
+          "pause": false,
+          "value": 30000
+        }
+      }
+    },
+    {
+      "id": "jenkins-pipeline-index-pattern",
+      "type": "index-pattern",
+      "attributes": {
+        "title": "jenkins-pipeline-logs-*",
+        "timeFieldName": "@timestamp",
+        "fields": "[]"
+      }
+    }
+  ]
+}

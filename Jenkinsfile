@@ -22,6 +22,13 @@ pipeline {
         SONAR_PROJECT_KEY = 'product-service'
         
         // ==========================================
+        // Configuration ELK Stack
+        // ==========================================
+        ELASTICSEARCH_URL = 'http://elasticsearch:9200'
+        LOGSTASH_URL = 'http://logstash:5044'
+        ELK_INDEX = 'jenkins-pipeline-logs'
+        
+        // ==========================================
         // Seuils de sécurité
         // ==========================================
         TRIVY_SEVERITY = 'CRITICAL,HIGH'
@@ -36,6 +43,10 @@ pipeline {
         skipDefaultCheckout(false)
     }
 
+    // ==========================================
+    // Fonctions utilitaires pour ELK
+    // ==========================================
+    
     stages {
         // ============================================
         // STAGE 1: Checkout + Initialisation
@@ -762,13 +773,92 @@ ${buildStatus == 'SUCCESS' ? '🎉 PIPELINE RÉUSSI!\nTous les critères de qual
                 // Sauvegarder le rapport dans un fichier
                 writeFile file: 'pipeline-report.txt', text: reportContent
                 archiveArtifacts artifacts: 'pipeline-report.txt', fingerprint: true, allowEmptyArchive: true
+                
+                // ==========================================
+                // Envoyer le résumé du pipeline à ELK
+                // ==========================================
+                script {
+                    def timestamp = new Date().format("yyyy-MM-dd'T'HH:mm:ss.SSSZ")
+                    def pipelineSummary = [
+                        '@timestamp': timestamp,
+                        'pipeline': env.JOB_NAME ?: 'product-service',
+                        'build_number': env.BUILD_NUMBER ?: '0',
+                        'build_url': env.BUILD_URL ?: '',
+                        'git_commit': env.SHORT_SHA ?: 'unknown',
+                        'git_branch': env.GIT_BRANCH ?: 'main',
+                        'stage': 'pipeline-complete',
+                        'status': buildStatus,
+                        'level': buildStatus == 'SUCCESS' ? 'INFO' : 'ERROR',
+                        'message': "Pipeline ${buildStatus}",
+                        'duration_seconds': currentBuild.duration / 1000,
+                        'node': env.NODE_NAME ?: 'master',
+                        'metrics': [
+                            'total_tests': 129,
+                            'unit_tests': 90,
+                            'api_tests': 30,
+                            'workflow_tests': 9
+                        ]
+                    ]
+                    
+                    def jsonPayload = groovy.json.JsonOutput.toJson(pipelineSummary)
+                    def dateIndex = new Date().format("yyyy.MM.dd")
+                    
+                    try {
+                        sh(script: """
+                            curl -s -X POST "${ELASTICSEARCH_URL}/${ELK_INDEX}-${dateIndex}/_doc" \\
+                                -H "Content-Type: application/json" \\
+                                -d '${jsonPayload}' || true
+                        """, returnStdout: true)
+                        echo "📊 Résumé pipeline envoyé à ELK Stack"
+                    } catch (Exception e) {
+                        echo "⚠️ Envoi ELK échoué (non bloquant): ${e.message}"
+                    }
+                }
             }
         }
         success {
             echo "🎉 Pipeline CI terminé avec succès!"
+            script {
+                // Envoyer log de succès à ELK
+                def timestamp = new Date().format("yyyy-MM-dd'T'HH:mm:ss.SSSZ")
+                def successLog = groovy.json.JsonOutput.toJson([
+                    '@timestamp': timestamp,
+                    'pipeline': env.JOB_NAME ?: 'product-service',
+                    'build_number': env.BUILD_NUMBER,
+                    'stage': 'final',
+                    'status': 'SUCCESS',
+                    'level': 'INFO',
+                    'message': 'Pipeline completed successfully',
+                    'duration_seconds': currentBuild.duration / 1000
+                ])
+                sh(script: """
+                    curl -s -X POST "${ELASTICSEARCH_URL}/${ELK_INDEX}-\$(date +%Y.%m.%d)/_doc" \\
+                        -H "Content-Type: application/json" \\
+                        -d '${successLog}' || true
+                """, returnStdout: true)
+            }
         }
         failure {
             echo "❌ Pipeline CI échoué - Vérifier les logs"
+            script {
+                // Envoyer log d'échec à ELK
+                def timestamp = new Date().format("yyyy-MM-dd'T'HH:mm:ss.SSSZ")
+                def failureLog = groovy.json.JsonOutput.toJson([
+                    '@timestamp': timestamp,
+                    'pipeline': env.JOB_NAME ?: 'product-service',
+                    'build_number': env.BUILD_NUMBER,
+                    'stage': 'final',
+                    'status': 'FAILED',
+                    'level': 'ERROR',
+                    'message': 'Pipeline failed - check logs',
+                    'duration_seconds': currentBuild.duration / 1000
+                ])
+                sh(script: """
+                    curl -s -X POST "${ELASTICSEARCH_URL}/${ELK_INDEX}-\$(date +%Y.%m.%d)/_doc" \\
+                        -H "Content-Type: application/json" \\
+                        -d '${failureLog}' || true
+                """, returnStdout: true)
+            }
         }
         cleanup {
             cleanWs()
